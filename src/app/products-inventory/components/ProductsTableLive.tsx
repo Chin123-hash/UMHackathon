@@ -48,8 +48,8 @@ async function fetchProducts(): Promise<ProductRow[]> {
     .order("name", { ascending: true });
 
   if (error) {
-    console.error("Error fetching products:", error);
-    throw error;
+    console.error("[v0] Supabase error fetching products:", error.message, error.code, error.details);
+    throw new Error(error.message || "Failed to fetch products from database");
   }
 
   return data || [];
@@ -139,12 +139,13 @@ export default function ProductsTableLive() {
   };
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return (
       <div className="bg-white rounded-card border border-border shadow-card p-8">
         <EmptyState
           icon={Package}
           title="Failed to load products"
-          description="There was an error loading the product inventory. Please try again."
+          description={`There was an error loading the product inventory: ${errorMessage}`}
           action={{
             label: "Retry",
             onClick: () => mutate("products"),
