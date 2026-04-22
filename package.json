@@ -49,6 +49,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.53",
     "@ai-sdk/react": "^3.0.170",
     "@dhiwise/component-tagger": "^1.0.15",
     "@heroicons/react": "^2.2.0",

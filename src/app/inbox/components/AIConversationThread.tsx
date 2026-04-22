@@ -61,6 +61,7 @@ export default function AIConversationThread({
       },
     ],
   });
+  const customerInput = input ?? "";
 
   useEffect(() => {
     setEscalated(conversation.status === "escalated");
@@ -270,14 +271,14 @@ export default function AIConversationThread({
           </div>
           <input
             type="text"
-            value={input}
+            value={customerInput}
             onChange={handleInputChange}
             placeholder="Type as customer to test bot response…"
             className="flex-1 px-3 py-2 text-sm bg-white rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-colors"
           />
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
+            disabled={!customerInput.trim() || isLoading}
             className="px-3 py-2 bg-muted text-foreground rounded-lg hover:bg-border disabled:opacity-40 disabled:cursor-not-allowed transition-colors active:scale-95"
           >
             <Send size={15} />

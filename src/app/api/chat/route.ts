@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { streamText, tool } from "ai";
+import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 
 export const maxDuration = 30;
@@ -36,14 +37,14 @@ Guidelines:
 - If you need to check something you don't know, use the available tools`;
 
   const result = streamText({
-    model: "openai/gpt-4o-mini",
+    model: openai("gpt-4o-mini"),
     system: systemPrompt,
     messages,
     tools: {
       checkInventory: tool({
         description:
           "Check the current inventory for a specific product by name or SKU",
-        parameters: z.object({
+        inputSchema: z.object({
           query: z.string().describe("Product name or SKU to search for"),
         }),
         execute: async ({ query }) => {
@@ -70,7 +71,7 @@ Guidelines:
       }),
       getLowStockAlerts: tool({
         description: "Get all products with low stock (below threshold)",
-        parameters: z.object({
+        inputSchema: z.object({
           threshold: z
             .number()
             .optional()
@@ -104,5 +105,5 @@ Guidelines:
     },
   });
 
-  return result.toDataStreamResponse();
+  return result.toTextStreamResponse();
 }
