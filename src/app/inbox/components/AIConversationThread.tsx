@@ -270,10 +270,11 @@ export default function AIConversationThread({
           </div>
           <input
             type="text"
-            value={input}
+            value={input ?? ""}
             onChange={handleInputChange}
             placeholder="Type as customer to test bot response…"
             className="flex-1 px-3 py-2 text-sm bg-white rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-colors"
+            suppressHydrationWarning
           />
           <button
             type="submit"
@@ -294,11 +295,12 @@ export default function AIConversationThread({
         <div className="flex gap-2">
           <input
             type="text"
-            value={ownerReplyText}
+            value={ownerReplyText ?? ""}
             onChange={(e) => setOwnerReplyText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendOwnerReply()}
             placeholder="Type a reply as owner…"
             className="flex-1 px-3 py-2 text-sm bg-muted rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-colors"
+            suppressHydrationWarning
           />
           <button
             onClick={handleSendOwnerReply}
