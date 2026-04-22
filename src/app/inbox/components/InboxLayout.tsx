@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import ConversationList from './ConversationList';
 import ConversationThread from './ConversationThread';
-import { Zap } from 'lucide-react';
+import AIConversationThread from './AIConversationThread';
+import { Zap, Bot, MessageSquare } from 'lucide-react';
 
 export interface Conversation {
   id: string;
@@ -169,6 +170,7 @@ const viralSpikeConversations: Conversation[] = [
 export default function InboxLayout() {
   const [selectedId, setSelectedId] = useState<string>('conv-001');
   const [viralSpike, setViralSpike] = useState(false);
+  const [useAI, setUseAI] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
 
   const handleViralSpike = () => {
@@ -192,18 +194,32 @@ export default function InboxLayout() {
             {conversations.length} conversations · {conversations.filter((c) => c.unread > 0).length} unread
           </p>
         </div>
-        <button
-          onClick={handleViralSpike}
-          className={[
-            'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-95',
-            viralSpike
-              ? 'bg-accent text-white shadow-md'
-              : 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100',
-          ].join(' ')}
-        >
-          <Zap size={15} className={viralSpike ? 'animate-pulse' : ''} />
-          {viralSpike ? 'Viral Spike ACTIVE — Agent Auto-Responding' : 'Simulate Viral Spike'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setUseAI((v) => !v)}
+            className={[
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-95',
+              useAI
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'bg-muted text-muted-foreground border border-border hover:bg-border',
+            ].join(' ')}
+          >
+            {useAI ? <Bot size={15} /> : <MessageSquare size={15} />}
+            {useAI ? 'AI Mode' : 'Static Mode'}
+          </button>
+          <button
+            onClick={handleViralSpike}
+            className={[
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-95',
+              viralSpike
+                ? 'bg-accent text-white shadow-md'
+                : 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100',
+            ].join(' ')}
+          >
+            <Zap size={15} className={viralSpike ? 'animate-pulse' : ''} />
+            {viralSpike ? 'Viral Spike ACTIVE' : 'Simulate Viral Spike'}
+          </button>
+        </div>
       </div>
 
       {/* Split panel */}
@@ -215,15 +231,27 @@ export default function InboxLayout() {
           viralSpike={viralSpike}
         />
         {selectedConv && (
-          <ConversationThread
-            conversation={selectedConv}
-            viralSpike={viralSpike}
-            onEscalate={(id) => {
-              setConversations((prev) =>
-                prev.map((c) => (c.id === id ? { ...c, status: 'escalated' } : c))
-              );
-            }}
-          />
+          useAI ? (
+            <AIConversationThread
+              conversation={selectedConv}
+              viralSpike={viralSpike}
+              onEscalate={(id) => {
+                setConversations((prev) =>
+                  prev.map((c) => (c.id === id ? { ...c, status: 'escalated' } : c))
+                );
+              }}
+            />
+          ) : (
+            <ConversationThread
+              conversation={selectedConv}
+              viralSpike={viralSpike}
+              onEscalate={(id) => {
+                setConversations((prev) =>
+                  prev.map((c) => (c.id === id ? { ...c, status: 'escalated' } : c))
+                );
+              }}
+            />
+          )
         )}
       </div>
     </div>
