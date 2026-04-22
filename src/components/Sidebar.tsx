@@ -36,6 +36,7 @@ const navGroups = [
     label: 'Commerce',
     items: [
       { href: '/orders-shipping', icon: Truck, label: 'Orders & Shipping', badge: null },
+      { href: '/sales-analytics', icon: BarChart2, label: 'Sales Analytics', badge: null },
       { href: '/live-chat-analysis', icon: BarChart2, label: 'Live Chat Analysis', badge: null },
       { href: '/shopee-mock', icon: ShoppingBag, label: 'Shopee Customer View', badge: null },
     ],
