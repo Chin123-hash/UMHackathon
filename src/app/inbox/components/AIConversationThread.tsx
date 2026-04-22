@@ -8,11 +8,10 @@ import {
   User,
   Crown,
   Loader2,
-  Info,
 } from "lucide-react";
-import { useChat } from "@ai-sdk/react";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { toast } from "sonner";
+import { createBrowserClient } from '@supabase/ssr';
 
 export interface Conversation {
   id: string;
@@ -20,7 +19,7 @@ export interface Conversation {
   avatar: string;
   lastMessage: string;
   time: string;
-  status: "new" | "ongoing" | "escalated" | "resolved";
+  status: string;
   intent: string;
 }
 
@@ -30,59 +29,121 @@ interface AIConversationThreadProps {
   onEscalate: (id: string) => void;
 }
 
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default function AIConversationThread({
   conversation,
   viralSpike,
   onEscalate,
 }: AIConversationThreadProps) {
-  const [escalated, setEscalated] = useState(
-    conversation.status === "escalated"
-  );
+  const [escalated, setEscalated] = useState(conversation.status === "escalated");
   const [ownerReplyText, setOwnerReplyText] = useState("");
+  const [customerInput, setCustomerInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    append,
-  } = useChat({
-    api: "/api/chat",
-    body: {
-      conversationId: conversation.id,
-    },
-    initialMessages: [
-      {
-        id: "initial-customer-msg",
-        role: "user",
-        content: conversation.lastMessage,
-      },
-    ],
-  });
-  const customerInput = input ?? "";
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
+  // Initialize Supabase Client for the chat window
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  // Fetch the full chat history when the conversation changes
   useEffect(() => {
-    setEscalated(conversation.status === "escalated");
-  }, [conversation.status]);
+    let isMounted = true;
+
+    const fetchHistory = async () => {
+      setIsLoadingHistory(true);
+      
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversation.id)
+        .order('created_at', { ascending: true }); // Oldest first for chat view
+
+      if (error) {
+        console.error("Failed to fetch chat history:", error);
+      } else if (data && isMounted) {
+        // Map database rows to our local UI state
+        const history: Message[] = data.map((msg) => ({
+          id: msg.id,
+          role: msg.sender === 'customer' ? 'user' : 'assistant',
+          content: msg.text,
+        }));
+        setMessages(history);
+      }
+      
+      if (isMounted) {
+        setIsLoadingHistory(false);
+        setEscalated(conversation.status === "escalated");
+      }
+    };
+
+    fetchHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [conversation.id, conversation.status, supabase]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, isLoadingHistory]);
 
-  // Handle viral spike auto-response simulation
+  const appendMessage = async (role: "user" | "assistant", content: string) => {
+    const newMessage: Message = { id: Date.now().toString(), role, content };
+    setMessages((prev) => [...prev, newMessage]);
+
+    if (role === "user") {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId: conversation.id,
+            message: content,
+          }),
+        });
+
+        if (!res.ok) throw new Error("API Request Failed");
+
+        const data = await res.json();
+        
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString() + "-bot",
+            role: "assistant",
+            content: data.reply || "Sorry, no response received.",
+          },
+        ]);
+      } catch (error) {
+        toast.error("Failed to fetch bot response.");
+        console.error("Chat Error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  // Viral spike auto-response simulation
   useEffect(() => {
     if (viralSpike && conversation.id.startsWith("spike")) {
       const timeout = setTimeout(() => {
-        append({
-          role: "user",
-          content: "stk size M ada tak? nak beli",
-        });
+        appendMessage("user", "stk size M ada tak? nak beli");
       }, 1000);
       return () => clearTimeout(timeout);
     }
-  }, [viralSpike, conversation.id, append]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viralSpike, conversation.id]);
 
   const handleEscalate = () => {
     setEscalated(true);
@@ -97,17 +158,26 @@ export default function AIConversationThread({
 
   const handleSendOwnerReply = () => {
     if (!ownerReplyText.trim()) return;
-    append({
-      role: "assistant",
-      content: `[Owner Reply] ${ownerReplyText}`,
+    appendMessage("assistant", `[Owner Reply] ${ownerReplyText}`);
+    
+    // Save owner reply to Supabase directly
+    supabase.from('messages').insert([{
+      conversation_id: conversation.id,
+      sender: 'owner', // Keep track that the owner sent this
+      text: `[Owner Reply] ${ownerReplyText}`
+    }]).then(({error}) => {
+       if(error) console.error("Failed to save owner reply:", error);
     });
+
     setOwnerReplyText("");
     toast.success("Reply sent as Owner");
   };
 
   const handleCustomerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSubmit(e);
+    if (!customerInput.trim() || isLoading) return;
+    appendMessage("user", customerInput);
+    setCustomerInput("");
   };
 
   return (
@@ -126,7 +196,7 @@ export default function AIConversationThread({
               <span className="text-xs text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded mono font-medium">
                 Shopee
               </span>
-              <StatusBadge status={conversation.status} />
+              <StatusBadge status={conversation.status as any} />
               <span className="text-xs text-muted-foreground mono">
                 {conversation.intent.replace("_", " ")}
               </span>
@@ -160,38 +230,16 @@ export default function AIConversationThread({
         </div>
       )}
 
-      {/* Messages */}
+      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto scrollbar-thin px-5 py-4 space-y-3">
-        {messages.map((msg) => (
-          <div key={msg.id} className="animate-fade-in">
-            {/* Tool invocations */}
-            {msg.parts?.map((part, idx) => {
-              if (part.type === "tool-invocation") {
-                return (
-                  <div key={idx} className="flex justify-center mb-2">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg text-xs mono text-primary-700">
-                      {part.toolInvocation.state === "result" ? (
-                        <Info size={11} />
-                      ) : (
-                        <Loader2 size={11} className="animate-spin" />
-                      )}
-                      <span className="font-semibold">
-                        {part.toolInvocation.toolName}
-                      </span>
-                      {part.toolInvocation.state === "result" && (
-                        <span className="text-primary-500">
-                          → {JSON.stringify(part.toolInvocation.result).slice(0, 50)}...
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })}
-
-            {/* Message bubble */}
-            {msg.content && (
+        {isLoadingHistory ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground gap-2">
+            <Loader2 className="animate-spin" size={24} />
+            <p className="text-sm">Loading chat history...</p>
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <div key={msg.id} className="animate-fade-in">
               <div
                 className={[
                   "flex items-end gap-2",
@@ -237,17 +285,11 @@ export default function AIConversationThread({
                       ? msg.content.replace("[Owner Reply] ", "")
                       : msg.content}
                   </div>
-                  <p className="text-xs text-muted-foreground mono mt-1 text-right">
-                    {new Date().toLocaleTimeString("en-MY", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
                 </div>
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          ))
+        )}
 
         {/* Typing indicator */}
         {isLoading && (
@@ -262,7 +304,7 @@ export default function AIConversationThread({
         <div ref={bottomRef} />
       </div>
 
-      {/* Customer message input (simulating customer) */}
+      {/* Customer message input */}
       <div className="px-5 py-2 border-t border-border shrink-0 bg-muted/30">
         <form onSubmit={handleCustomerSubmit} className="flex gap-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mono">
@@ -272,7 +314,7 @@ export default function AIConversationThread({
           <input
             type="text"
             value={customerInput}
-            onChange={handleInputChange}
+            onChange={(e) => setCustomerInput(e.target.value)}
             placeholder="Type as customer to test bot response…"
             className="flex-1 px-3 py-2 text-sm bg-white rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-colors"
             suppressHydrationWarning

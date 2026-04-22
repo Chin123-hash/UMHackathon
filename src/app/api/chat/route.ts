@@ -1,109 +1,123 @@
+import { NextResponse } from 'next/server';
 import { createClient } from "@/lib/supabase/server";
-import { streamText, tool } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { z } from "zod";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { messages, conversationId } = await req.json();
+  try {
+    const { message, conversationId } = await req.json();
 
-  const supabase = await createClient();
+    if (!message) {
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
 
-  // Fetch current inventory for context
-  const { data: products } = await supabase
-    .from("products")
-    .select("id, sku, name, size, price, stock");
+    const supabase = await createClient();
 
-  const inventoryContext = products
-    ?.map(
-      (p) =>
-        `- ${p.name} (Size: ${p.size || "N/A"}, SKU: ${p.sku}): $${p.price}, Stock: ${p.stock}`
-    )
-    .join("\n");
+    // 1. Save customer's message to Supabase
+    if (conversationId) {
+      await supabase.from("messages").insert([
+        { conversation_id: conversationId, sender: "customer", text: message },
+      ]);
+    }
 
-  const systemPrompt = `You are SellerMate AI, an intelligent assistant for e-commerce sellers. You help manage customer inquiries, check inventory, and provide product information.
+    // 2. Fetch current inventory for context
+    const { data: products } = await supabase
+      .from("products")
+      .select("id, sku, name, size, price, stock");
 
-Current Inventory:
-${inventoryContext}
+    const inventoryContext = products
+      ?.map(
+        (p) => `- ${p.name} (Size: ${p.size || "N/A"}, SKU: ${p.sku}): RM${p.price}, Stock: ${p.stock}`
+      )
+      .join("\n") || "No inventory data found.";
 
-Guidelines:
-- Be helpful, friendly, and professional
-- When customers ask about products, check inventory and provide accurate info
-- If a product is low stock (< 50), mention it might sell out soon
-- If a product is out of stock (0), apologize and suggest alternatives
-- For order inquiries, help track status or escalate to the owner
-- Keep responses concise but informative
-- If you need to check something you don't know, use the available tools`;
+    // 3. Construct the System Prompt
+    const systemPrompt = `You are SellerMate AI, an intelligent assistant for e-commerce sellers in Malaysia.
+    You help manage customer inquiries, check inventory, and provide product information.
+    Be friendly, professional, and occasionally use Malaysian slang like 'ye', 'boleh', 'sis'.
 
-  const result = streamText({
-    model: openai("gpt-4o-mini"),
-    system: systemPrompt,
-    messages,
-    tools: {
-      checkInventory: tool({
-        description:
-          "Check the current inventory for a specific product by name or SKU",
-        inputSchema: z.object({
-          query: z.string().describe("Product name or SKU to search for"),
-        }),
-        execute: async ({ query }) => {
-          const { data: matchedProducts } = await supabase
-            .from("products")
-            .select("*")
-            .or(`name.ilike.%${query}%,sku.ilike.%${query}%`);
+    Current Inventory:
+    ${inventoryContext}
 
-          if (!matchedProducts || matchedProducts.length === 0) {
-            return { found: false, message: "No products found matching query" };
-          }
+    Guidelines:
+    - Check the inventory context provided above to answer stock questions.
+    - If a product is low stock (< 50), mention it might sell out soon.
+    - If a product is out of stock (0), apologize and suggest alternatives.
+    - Keep responses concise but informative. Do not write long paragraphs.`;
 
-          return {
-            found: true,
-            products: matchedProducts.map((p) => ({
-              name: p.name,
-              size: p.size,
-              price: p.price,
-              stock: p.stock,
-              sku: p.sku,
-            })),
-          };
+    let botReply = "";
+
+    // 4. AI PROVIDER ROUTING (The "Graceful Fallback" logic)
+    // Check if Zhipu Key exists and isn't a dummy string
+    if (process.env.ZAI_API_KEY && !process.env.ZAI_API_KEY.includes("your-zai")) {
+      console.log("Routing to Zhipu AI (GLM-4)...");
+      
+      const glmResponse = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.ZAI_API_KEY}`,
         },
-      }),
-      getLowStockAlerts: tool({
-        description: "Get all products with low stock (below threshold)",
-        inputSchema: z.object({
-          threshold: z
-            .number()
-            .optional()
-            .describe("Stock threshold, defaults to 50"),
-        }),
-        execute: async ({ threshold = 50 }) => {
-          const { data: lowStockProducts } = await supabase
-            .from("products")
-            .select("name, size, stock, sku")
-            .lt("stock", threshold)
-            .order("stock", { ascending: true });
+        body: JSON.stringify({
+          model: 'glm-4',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ]
+        })
+      });
 
-          return {
-            count: lowStockProducts?.length || 0,
-            products: lowStockProducts || [],
-          };
+      if (!glmResponse.ok) throw new Error(`Zhipu API Error: ${glmResponse.statusText}`);
+      const aiData = await glmResponse.json();
+      botReply = aiData.choices[0].message.content;
+
+    } 
+    // Fallback to Gemini if Zhipu key is missing
+    // Fallback to Gemini if Zhipu key is missing
+    else if (process.env.GROQ_API_KEY) {
+      console.log("Routing to Groq (Llama 3)...");
+      
+      const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
         },
-      }),
-    },
-    onFinish: async ({ text }) => {
-      // Save bot response to database
-      if (conversationId && text) {
-        await supabase.from("messages").insert([
-          {
-            conversation_id: conversationId,
-            sender: "bot",
-            text,
-          },
-        ]);
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile', // Super fast, free model
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ]
+        })
+      });
+
+      if (!groqResponse.ok) {
+        const errorDetails = await groqResponse.text();
+        throw new Error(`Groq API Error: ${errorDetails}`);
       }
-    },
-  });
+      
+      const aiData = await groqResponse.json();
+      botReply = aiData.choices[0].message.content;
+    } 
+    else {
+      throw new Error("No valid AI API keys found in .env file.");
+    }
 
-  return result.toTextStreamResponse();
+    // 5. Save the Bot's response to Supabase
+    if (conversationId) {
+      await supabase.from("messages").insert([
+        { conversation_id: conversationId, sender: "bot", text: botReply },
+      ]);
+    }
+
+    // 6. Return response to UI
+    return NextResponse.json({ reply: botReply });
+
+  } catch (error) {
+    console.error("Chat API Error:", error);
+    return NextResponse.json({ 
+      reply: "Maaf, sistem sedang sibuk. Sila cuba sebentar lagi 🙏" 
+    });
+  }
 }
