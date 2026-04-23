@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Brain, Database, Truck, Send, CheckCircle2, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import React from 'react';
+import { Brain, Database, Truck, Send, CheckCircle2, Clock } from 'lucide-react';
 
-interface TimelineStep {
+export interface TimelineStep {
   id: string;
-  icon: React.ReactNode;
   label: string;
   detail: string;
   time: string;
@@ -13,132 +12,78 @@ interface TimelineStep {
   latency?: string;
 }
 
-const timelineData: TimelineStep[] = [
-  {
-    id: 'step-intent',
-    icon: <Brain size={14} />,
-    label: 'Intent Detected',
-    detail: 'stock_query · entities: {size: "M", product: "Baju Kurung Moden"}',
-    time: '15:24:31',
-    type: 'intent',
-    latency: '0.3s',
-  },
-  {
-    id: 'step-inventory',
-    icon: <Database size={14} />,
-    label: 'Tool Call: Inventory API',
-    detail: 'GET /inventory?sku=BKM-001&size=M → stock: 3, reserved: 1',
-    time: '15:24:31',
-    type: 'tool',
-    latency: '0.8s',
-  },
-  {
-    id: 'step-shipping',
-    icon: <Truck size={14} />,
-    label: 'Tool Call: Shipping API',
-    detail: 'GET /shipping?from=KL&to=Sabah → RM 9.90, est 5–7 days',
-    time: '15:24:32',
-    type: 'tool',
-    latency: '1.1s',
-  },
-  {
-    id: 'step-reply',
-    icon: <Send size={14} />,
-    label: 'Reply Generated',
-    detail: '"Ada stok M, tinggal 2 je! 😊 Pos ke Sabah RM9.90, 5–7 hari. Nak proceed?"',
-    time: '15:24:33',
-    type: 'reply',
-    latency: '0.6s',
-  },
-  {
-    id: 'step-sent',
-    icon: <CheckCircle2 size={14} />,
-    label: 'Message Sent via Shopee API',
-    detail: 'Delivered · msgId: SP-4821-KL · lang: ms-MY',
-    time: '15:24:33',
-    type: 'complete',
-    latency: '0.2s',
-  },
-];
-
-const typeStyles: Record<string, { dot: string; line: string; badge: string }> = {
-  intent: { dot: 'bg-purple-500', line: 'bg-purple-100', badge: 'bg-purple-50 text-purple-600' },
-  tool: { dot: 'bg-primary-600', line: 'bg-primary-100', badge: 'bg-primary-50 text-primary-600' },
-  reply: { dot: 'bg-amber-500', line: 'bg-amber-100', badge: 'bg-amber-50 text-amber-600' },
-  complete: { dot: 'bg-green-500', line: 'bg-green-100', badge: 'bg-green-50 text-green-600' },
+const getIconForType = (type: string, detail: string) => {
+  if (type === 'intent') return <Brain size={14} />;
+  if (type === 'reply') return <Send size={14} />;
+  if (type === 'complete') return <CheckCircle2 size={14} />;
+  // tools
+  if (detail.toLowerCase().includes('inventory') || detail.toLowerCase().includes('stock')) return <Database size={14} />;
+  if (detail.toLowerCase().includes('shipping')) return <Truck size={14} />;
+  return <Database size={14} />;
 };
 
-export default function AgentTimeline() {
-  const [expanded, setExpanded] = useState<string | null>('step-inventory');
-
+export default function AgentTimeline({ data }: { data: TimelineStep[] }) {
   return (
-    <div className="bg-white rounded-card border border-border shadow-card">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Recent Agent Actions</h2>
-          <p className="text-xs text-muted-foreground mono">Nurul_Ain92 · 15:24:31</p>
-        </div>
-        <span className="badge-bot">Total 3.0s</span>
+    <div className="bg-white rounded-card border border-border shadow-card h-[400px] flex flex-col relative overflow-hidden">
+      <div className="p-4 border-b border-border bg-gray-50/50">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <Brain size={16} className="text-primary-500" />
+          Agent Reasoning Log
+        </h3>
+        <p className="text-xs text-muted-foreground mt-0.5">Real-time internal AI states</p>
       </div>
 
-      <div className="px-5 py-4">
-        <ul className="space-y-0">
-          {timelineData.map((step, idx) => {
-            const styles = typeStyles[step.type];
-            const isExpanded = expanded === step.id;
-            const isLast = idx === timelineData.length - 1;
+      <div className="flex-1 overflow-y-auto p-5 relative">
+        {/* The connecting line */}
+        <div className="absolute left-[33px] top-6 bottom-6 w-px bg-gray-200" />
 
-            return (
-              <li key={step.id} className="flex gap-3">
-                {/* Dot + line */}
-                <div className="flex flex-col items-center">
-                  <div className={`w-6 h-6 rounded-full ${styles.dot} flex items-center justify-center text-white shrink-0 z-10`}>
-                    {step.icon}
-                  </div>
-                  {!isLast && <div className={`w-0.5 flex-1 ${styles.line} min-h-[16px]`} />}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 pb-3 min-w-0">
-                  <button
-                    onClick={() => setExpanded(isExpanded ? null : step.id)}
-                    className="w-full flex items-start justify-between gap-2 text-left group"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-foreground">{step.label}</p>
-                      <p className="text-xs text-muted-foreground mono mt-0.5">{step.time}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {step.latency && (
-                        <span className="flex items-center gap-0.5 text-xs text-muted-foreground mono">
-                          <Clock size={10} />
-                          {step.latency}
-                        </span>
-                      )}
-                      {isExpanded ? (
-                        <ChevronUp size={12} className="text-muted-foreground" />
-                      ) : (
-                        <ChevronDown size={12} className="text-muted-foreground" />
-                      )}
-                    </div>
-                  </button>
-
-                  {isExpanded && (
-                    <div className={`mt-2 p-2 rounded-lg ${styles.badge} text-xs mono leading-relaxed animate-fade-in`}>
-                      {step.detail}
-                    </div>
+        {data.length === 0 ? (
+           <div className="text-center text-sm text-gray-500 py-10 relative z-10">No recent agent activity.</div>
+        ) : (
+          <div className="space-y-6 relative z-10">
+            {data.map((step, idx) => (
+              <div key={step.id} className="flex items-start gap-4 group">
+                <div className="w-14 text-right pt-1 shrink-0">
+                  <span className="text-[10px] text-muted-foreground mono block">
+                    {step.time}
+                  </span>
+                  {step.latency && (
+                    <span className="text-[9px] text-green-600 font-medium">+{step.latency}</span>
                   )}
                 </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
 
-      <div className="px-5 py-3 border-t border-border">
-        <button className="text-xs text-primary-600 font-medium hover:underline">
-          View full trace in Logs →
-        </button>
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2 border-white shadow-sm transition-transform group-hover:scale-110 ${
+                    step.type === 'intent'
+                      ? 'bg-purple-100 text-purple-600'
+                      : step.type === 'tool'
+                      ? 'bg-blue-100 text-blue-600'
+                      : step.type === 'reply'
+                      ? 'bg-primary-100 text-primary-600'
+                      : 'bg-green-100 text-green-600'
+                  }`}
+                >
+                  {getIconForType(step.type, step.detail)}
+                </div>
+
+                <div className="pt-0.5 pb-2">
+                  <p className="text-sm font-semibold text-gray-800">{step.label}</p>
+                  <div className="mt-1 bg-gray-50 border border-gray-100 rounded-md p-2 text-xs text-gray-600 font-mono break-all max-w-[200px] sm:max-w-[250px]">
+                    {step.detail}
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <div className="flex items-start gap-4 opacity-50">
+               <div className="w-14 text-right pt-1 shrink-0"></div>
+               <div className="w-7 h-7 rounded-full bg-gray-100 border-2 border-white shadow-sm flex items-center justify-center">
+                  <Clock size={12} className="text-gray-400" />
+               </div>
+               <div className="pt-1.5"><p className="text-xs font-medium text-gray-400">Waiting for events...</p></div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

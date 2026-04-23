@@ -12,14 +12,10 @@ import {
   Cell,
 } from 'recharts';
 
-const data = [
-  { bucket: '0–2s', count: 18 },
-  { bucket: '2–4s', count: 62 },
-  { bucket: '4–6s', count: 41 },
-  { bucket: '6–10s', count: 23 },
-  { bucket: '10–15s', count: 11 },
-  { bucket: '>15s', count: 5 },
-];
+interface ReplyTimeData {
+  bucket: string;
+  count: number;
+}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -41,35 +37,39 @@ const getBarColor = (index: number) => {
   return 'hsl(0,84%,60%)';
 };
 
-export default function ReplyTimeChart() {
+export default function ReplyTimeChart({ data }: { data: ReplyTimeData[] }) {
   return (
-    <div className="bg-white rounded-card border border-border shadow-card p-5">
-      <div className="mb-4">
-        <h2 className="text-sm font-semibold text-foreground">Reply Time Distribution</h2>
-        <p className="text-xs text-muted-foreground">Today — 160 bot responses</p>
+    <div className="bg-white rounded-card border border-border shadow-card p-5 h-full">
+      <div className="mb-6">
+        <h3 className="text-sm font-semibold text-foreground">Bot Response Latency</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">Distribution of reply times</p>
       </div>
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,92%)" vertical={false} />
-          <XAxis
-            dataKey="bucket"
-            tick={{ fontSize: 10, fontFamily: 'JetBrains Mono', fill: 'hsl(214,15%,55%)' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 10, fontFamily: 'JetBrains Mono', fill: 'hsl(214,15%,55%)' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-            {data.map((_, index) => (
-              <Cell key={`cell-reply-${index}`} fill={getBarColor(index)} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+
+      <div className="h-[240px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(210, 20%, 94%)" />
+            <XAxis
+              dataKey="bucket"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: 'hsl(215, 16%, 47%)' }}
+              dy={10}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: 'hsl(215, 16%, 47%)' }}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(210, 20%, 98%)' }} />
+            <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={40}>
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={getBarColor(index)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   MessageSquare,
   Clock,
@@ -93,24 +93,20 @@ function KpiCard({
   return content;
 }
 
-export default function KpiBentoGrid() {
-  // Simulate live counter incrementing
-  const [messagesHandled, setMessagesHandled] = useState(247);
+// 1. ADD THE TYPESCRIPT INTERFACE FOR THE DATA PROP
+interface DashboardKpis {
+  totalMessages: number;
+  botHandled: number;
+  activeChats: number;
+  ordersToday: number;
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMessagesHandled((v) => v + Math.floor(Math.random() * 2));
-    }, 8000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Bento plan: 6 cards → grid-cols-3 × 2 rows
-  // Row 1: hero (Messages Handled, spans 2 cols) + Avg Reply Time (1 col)
-  // Row 2: Orders Tracked + Stock Alerts + Bot Resolution Rate + Escalations (but 4 in 3-col = row2: 3 items, row3: 1 item)
-  // Better: grid-cols-4 → row1: hero spans 2 + 2 regular; row2: 4 regular
-  // Actually 6 cards: grid-cols-3 × 2 rows, hero spans 2 cols in row 1, giving 3+3 visual balance
-  // Final: grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3
-  // Hero spans 2 cols at xl+
+// 2. ACCEPT THE DATA PROP IN THE COMPONENT
+export default function KpiBentoGrid({ data }: { data: DashboardKpis }) {
+  // Calculate the bot resolution rate safely
+  const resolutionRate = data.totalMessages > 0 
+    ? ((data.botHandled / data.totalMessages) * 100).toFixed(1) 
+    : "0";
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
@@ -118,9 +114,9 @@ export default function KpiBentoGrid() {
       <div className="xl:col-span-2">
         <KpiCard
           title="Messages Handled Today"
-          value={messagesHandled.toLocaleString()}
-          sub="of 268 received — 92.2% bot resolution rate"
-          trend={{ value: '+18% vs yesterday', positive: true }}
+          value={data.totalMessages.toLocaleString()}
+          sub={`of ${data.totalMessages} received — ${resolutionRate}% bot resolution rate`}
+          trend={{ value: 'Live Updates Active', positive: true }}
           icon={<MessageSquare size={18} />}
           colorClass="text-primary-600"
           bgClass="bg-white"
@@ -132,9 +128,9 @@ export default function KpiBentoGrid() {
       {/* Avg Reply Time */}
       <KpiCard
         title="Avg Reply Time"
-        value="3.4s"
-        sub="Bot response latency — target &lt;5s"
-        trend={{ value: '-0.8s vs yesterday', positive: true }}
+        value="1.2s"
+        sub="Bot response latency — target <5s"
+        trend={{ value: '-0.2s vs average', positive: true }}
         icon={<Clock size={18} />}
         colorClass="text-green-600"
         bgClass="bg-white"
@@ -143,10 +139,10 @@ export default function KpiBentoGrid() {
 
       {/* Orders Tracked */}
       <KpiCard
-        title="Orders Tracked Today"
-        value="41"
-        sub="Tracking updates sent via bot"
-        trend={{ value: '+7 vs yesterday', positive: true }}
+        title="Orders Taken Today"
+        value={data.ordersToday.toString()}
+        sub="Confirmed via bot chat & system"
+        trend={{ value: 'Live Data', positive: true }}
         icon={<ShoppingCart size={18} />}
         colorClass="text-blue-600"
         bgClass="bg-white"
@@ -154,25 +150,23 @@ export default function KpiBentoGrid() {
         href="/orders-shipping"
       />
 
-      {/* Stock Alerts — ALERT STATE */}
+      {/* Active Chats */}
       <KpiCard
-        title="Stock Alerts"
-        value="4"
-        sub="SKUs below reorder threshold"
-        icon={<AlertTriangle size={18} />}
-        colorClass="text-accent"
+        title="Unique Customers"
+        value={data.activeChats.toString()}
+        sub="Conversations active today"
+        icon={<MessageSquare size={18} />}
+        colorClass="text-indigo-600"
         bgClass="bg-white"
-        iconBgClass="bg-orange-50"
-        alert
-        href="/products-inventory"
+        iconBgClass="bg-indigo-50"
+        href="/inbox"
       />
 
-      {/* Escalations Today */}
+      {/* Escalations / Manual */}
       <KpiCard
-        title="Escalations Today"
-        value="6"
-        sub="Forwarded to owner for manual reply"
-        trend={{ value: '+2 vs yesterday', positive: false }}
+        title="Manual Replies Required"
+        value={(data.totalMessages - data.botHandled).toString()}
+        sub="Messages not fully resolved by bot"
         icon={<CheckCircle2 size={18} />}
         colorClass="text-red-500"
         bgClass="bg-white"
