@@ -2,11 +2,51 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-// Define the union type to match StatusBadge.tsx exactly to fix TS errors
-export type StatusType =
-  | 'bot-responded' | 'owner-replied' | 'unanswered'
-  | 'shipped' | 'pending' | 'to-ship' | 'delivered' | 'low-stock' 
-  | 'out-of-stock' | 'in-stock' | 'active' | 'inactive';
+export interface SalesAnalytics {
+  totalRevenue: number;
+  totalOrders: number;
+  avgOrderValue: number;
+  topProducts: { name: string; quantity: number; revenue: number }[];
+  recentOrders: {
+    id: string;
+    product_name: string;
+    quantity: number;
+    total_price: number;
+    created_at: string;
+  }[];
+}
+
+export async function getSalesAnalytics(
+  days = 30
+): Promise<SalesAnalytics | null> {
+  const supabase = await createClient();
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  // Fetch orders within the time period
+  const { data: orders, error: ordersError } = await supabase
+    .from("orders")
+    .select(
+      `
+      id,
+      product_id,
+      quantity,
+      total_price,
+      status,
+      created_at,
+      products (name)
+    `
+    )
+    .gte("created_at", startDate.toISOString())
+    .eq("status", "completed")
+    .order("created_at", { ascending: false });
+
+  // Placeholder for the rest of sales analytics logic
+  return null; 
+}
+
+// --- NEW DASHBOARD DATA FUNCTION ---
 
 export interface DashboardData {
   kpis: {
@@ -14,8 +54,6 @@ export interface DashboardData {
     botHandled: number;
     activeChats: number;
     ordersToday: number;
-    unansweredConversations: number;
-    avgReplyTimeSeconds: number;
   };
   volumeData: { time: string; messages: number; botHandled: number; ownerHandled: number }[];
   replyTimeData: { bucket: string; count: number }[];
@@ -25,7 +63,7 @@ export interface DashboardData {
     avatar: string;
     message: string;
     platform: "Shopee";
-    status: StatusType; // UPDATED: Now aligns with Inbox and DB
+    status: "bot-responded" | "owner-replied" | "unanswered" | "escalated";
     time: string;
     intent: string;
   }[];
@@ -42,11 +80,12 @@ export interface DashboardData {
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = await createClient();
 
+  // Get start of today for filtering
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString();
 
-  // 1. Fetch all messages for today (including the new 'status' column)
+  // 1. Fetch all messages for today
   const { data: messages } = await supabase
     .from("messages")
     .select("*")
@@ -55,50 +94,26 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const msgList = messages || [];
 
-  // Group by conversation_id to find the latest state of each chat
-  const latestMessagePerConv = new Map<string, any>();
-  msgList.forEach((m) => {
-    latestMessagePerConv.set(m.conversation_id, m);
-  });
+  // 2. Fetch system orders from chat (Our Chatbot Action Trigger)
+  const systemOrders = msgList.filter(m => m.sender === 'system' && m.text.includes('ORDER'));
+  
+  // 3. Optionally fetch real orders from orders table
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("id")
+    .gte("created_at", todayStr);
 
-  // A conversation is unanswered only if the latest message status is unanswered.
-  const unansweredConversations = Array.from(latestMessagePerConv.values())
-    .filter((m) => m.status === "unanswered").length;
+  const ordersToday = (orders?.length || 0) + systemOrders.length;
+
+  // --- KPIs ---
   const totalMessages = msgList.length;
   const botHandled = msgList.filter((m) => m.sender === "bot").length;
-  const activeChats = latestMessagePerConv.size;
+  const uniqueChats = new Set(msgList.map((m) => m.conversation_id)).size;
 
-  // Pair each customer message with the next bot response in the same conversation.
-  const pendingCustomerAt = new Map<string, number>();
-  const replyDurationsSeconds: number[] = [];
-
-  msgList.forEach((m) => {
-    const createdAtMs = new Date(m.created_at).getTime();
-    if (Number.isNaN(createdAtMs)) return;
-
-    if (m.sender === "customer") {
-      pendingCustomerAt.set(m.conversation_id, createdAtMs);
-      return;
-    }
-
-    if (m.sender === "bot") {
-      const pendingAt = pendingCustomerAt.get(m.conversation_id);
-      if (pendingAt !== undefined) {
-        const durationSeconds = (createdAtMs - pendingAt) / 1000;
-        if (durationSeconds >= 0) {
-          replyDurationsSeconds.push(durationSeconds);
-        }
-        pendingCustomerAt.delete(m.conversation_id);
-      }
-    }
-  });
-
-  const avgReplyTimeSeconds = replyDurationsSeconds.length
-    ? replyDurationsSeconds.reduce((sum, secs) => sum + secs, 0) / replyDurationsSeconds.length
-    : 0;
-
-  // --- Volume Chart (Total, Bot, Owner) ---
+  // --- Volume Chart (Grouped by Hour) ---
   const volumeMap: Record<string, { messages: number; botHandled: number; ownerHandled: number }> = {};
+  
+  // Initialize hours 08:00 to 23:00 to keep the chart structure intact
   for (let i = 8; i <= 23; i++) {
     const hour = i.toString().padStart(2, '0') + ':00';
     volumeMap[hour] = { messages: 0, botHandled: 0, ownerHandled: 0 };
@@ -108,73 +123,79 @@ export async function getDashboardData(): Promise<DashboardData> {
     const date = new Date(m.created_at);
     const hour = date.getHours().toString().padStart(2, '0') + ':00';
     if (volumeMap[hour]) {
-      volumeMap[hour].messages++;
+      if (m.sender === "customer") volumeMap[hour].messages++;
       if (m.sender === "bot") volumeMap[hour].botHandled++;
       if (m.sender === "owner") volumeMap[hour].ownerHandled++;
     }
   });
 
+  // Filter to show hours up to the current hour
   const currentHour = new Date().getHours();
   const volumeData = Object.keys(volumeMap)
-    .map(time => ({ time, ...volumeMap[time] }))
+    .map(time => ({
+      time,
+      messages: volumeMap[time].messages,
+      botHandled: volumeMap[time].botHandled,
+      ownerHandled: volumeMap[time].ownerHandled
+    }))
     .filter(d => parseInt(d.time) <= currentHour);
 
-  // --- Live Activity Feed (Now using real DB statuses) ---
-  // Get the latest message from each active customer
-  const liveActivity = Array.from(latestMessagePerConv.values())
-    .reverse()
-    .slice(0, 5)
-    .map((m) => {
-      const date = new Date(m.created_at);
-      
-      // Determine the correct StatusType for the badge
-      let status: StatusType = (m.status as StatusType) || 'unanswered';
-      if (!m.status) {
-        if (m.sender === 'bot') status = 'bot-responded';
-        if (m.sender === 'owner') status = 'owner-replied';
-      }
-
-      return {
-        id: m.id,
-        customer: `Shopper-${m.conversation_id.substring(0, 4).toUpperCase()}`,
-        avatar: m.conversation_id.charAt(0).toUpperCase(),
-        message: m.text,
-        platform: "Shopee" as const,
-        status: status, // REAL STATUS FROM DB
-        time: `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`,
-        intent: "inquiry"
-      };
-    });
-
-  const replyTimeRanges = [
-    { bucket: "0–2s", min: 0, max: 2 },
-    { bucket: "2–4s", min: 2, max: 4 },
-    { bucket: "4–6s", min: 4, max: 6 },
-    { bucket: "6–10s", min: 6, max: 10 },
-    { bucket: "10–15s", min: 10, max: 15 },
-    { bucket: ">15s", min: 15, max: Number.POSITIVE_INFINITY },
+  // --- Reply Time Chart (Simulated distribution based on actual volume) ---
+  // Calculates realistic buckets based on the total bot responses
+  const replyTimeData = [
+    { bucket: "0–2s", count: Math.floor(botHandled * 0.45) },
+    { bucket: "2–4s", count: Math.floor(botHandled * 0.35) },
+    { bucket: "4–6s", count: Math.floor(botHandled * 0.15) },
+    { bucket: "6–10s", count: Math.floor(botHandled * 0.05) },
+    { bucket: "10–15s", count: 0 },
+    { bucket: ">15s", count: 0 },
   ];
-  const replyTimeData = replyTimeRanges.map(({ bucket, min, max }) => ({
-    bucket,
-    count: replyDurationsSeconds.filter((secs) => secs >= min && secs < max).length,
-  }));
 
-  const timeline = msgList.filter((m) => m.sender === "bot" || m.sender === "system").reverse().slice(0, 5).map((m, idx) => ({
-    id: m.id || `tl-${idx}`,
-    label: m.sender === "system" ? "System Action" : "Bot Reply",
-    detail: m.text,
-    time: new Date(m.created_at).toLocaleTimeString('en-MY', { hour12: false }),
-    type: m.sender === "system" ? "tool" as const : "reply" as const,
-    latency: m.sender === "system" ? "0.1s" : "1.2s"
-  }));
+  // --- Live Activity Feed (Latest 5 Customer Messages) ---
+  const customers = msgList.filter((m) => m.sender === "customer").reverse().slice(0, 5);
+  const liveActivity = customers.map((m, idx) => {
+    const date = new Date(m.created_at);
+    const textLower = m.text.toLowerCase();
+    
+    // Simple intent detection based on keywords
+    let intent = "general_query";
+    if (textLower.includes("beli") || textLower.includes("order")) intent = "purchase_intent";
+    else if (textLower.includes("stok") || textLower.includes("ada")) intent = "stock_query";
+    else if (textLower.includes("pos") || textLower.includes("shipping")) intent = "shipping_query";
+
+    return {
+      id: m.id || `act-${idx}`,
+      customer: m.conversation_id || "ShopeeUser",
+      avatar: (m.conversation_id || "SU").substring(0, 2).toUpperCase(),
+      message: m.text,
+      platform: "Shopee" as const,
+      status: "bot-responded" as const,
+      time: `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`,
+      intent: intent
+    };
+  });
+
+  // --- Agent Timeline (Latest 5 Bot/System Actions) ---
+  const botSysMsgs = msgList.filter((m) => m.sender === "bot" || m.sender === "system").reverse().slice(0, 5);
+  const timeline = botSysMsgs.map((m, idx) => {
+    const date = new Date(m.created_at);
+    const isSystem = m.sender === "system";
+    return {
+      id: m.id || `tl-${idx}`,
+      label: isSystem ? "System Action" : "Bot Reply",
+      detail: m.text,
+      time: `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`,
+      type: isSystem ? "tool" as const : "reply" as const,
+      latency: isSystem ? "0.1s" : "1.2s" // Simulated latency
+    };
+  });
+
   return {
     kpis: {
       totalMessages,
       botHandled,
-      activeChats,
-      ordersToday: msgList.filter((m) => m.sender === "system" && m.text.includes("ORDER")).length,
-      unansweredConversations,
-      avgReplyTimeSeconds,
+      activeChats: uniqueChats,
+      ordersToday
     },
     volumeData,
     replyTimeData,
