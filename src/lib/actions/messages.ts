@@ -70,6 +70,11 @@ export async function addMessage(
 ): Promise<{ success: boolean; data?: Message; error?: string }> {
   const supabase = await createClient();
 
+  // --- FIX: Map sender to the correct database status ---
+  let status = "unanswered";
+  if (sender === "bot") status = "bot-responded";
+  if (sender === "owner") status = "owner-replied";
+
   const { data, error } = await supabase
     .from("messages")
     .insert([
@@ -77,6 +82,7 @@ export async function addMessage(
         conversation_id: conversationId,
         sender,
         text,
+        status, // Now we explicitly tell the DB what the status is
       },
     ])
     .select()

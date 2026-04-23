@@ -2,6 +2,7 @@
 
 import React from 'react';
 import StatusBadge from '@/components/ui/StatusBadge';
+import type { StatusType } from '@/components/ui/StatusBadge';
 import { RefreshCw } from 'lucide-react';
 
 export interface ActivityItem {
@@ -10,7 +11,7 @@ export interface ActivityItem {
   avatar: string;
   message: string;
   platform: 'Shopee';
-  status: 'bot-responded' | 'owner-replied' | 'unanswered' | 'escalated';
+  status: StatusType;
   time: string;
   intent: string;
 }

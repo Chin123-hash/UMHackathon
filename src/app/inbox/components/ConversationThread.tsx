@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, Send, Bot, User, Crown, Loader2, Info } from 'lucide-react';
+import { Send, Bot, User, Crown, Loader2, Info } from 'lucide-react';
 import { Conversation } from './InboxLayout';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { toast } from 'sonner';
-
+import { addMessage } from '@/lib/actions/messages'; // Add this import
 interface Message {
   id: string;
   sender: 'customer' | 'bot' | 'owner';
@@ -71,25 +71,21 @@ const defaultThread = (conv: Conversation): Message[] => [
 interface ConversationThreadProps {
   conversation: Conversation;
   viralSpike: boolean;
-  onEscalate: (id: string) => void;
 }
 
 export default function ConversationThread({
   conversation,
   viralSpike,
-  onEscalate,
 }: ConversationThreadProps) {
   const messages = threadData[conversation.id] || defaultThread(conversation);
   const [displayMessages, setDisplayMessages] = useState<Message[]>(messages);
   const [isTyping, setIsTyping] = useState(false);
   const [replyText, setReplyText] = useState('');
-  const [escalated, setEscalated] = useState(conversation.status === 'escalated');
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDisplayMessages(threadData[conversation.id] || defaultThread(conversation));
-    setEscalated(conversation.status === 'escalated');
-  }, [conversation.id, conversation.status]);
+  }, [conversation.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -115,27 +111,30 @@ export default function ConversationThread({
     }
   }, [viralSpike, conversation.id]);
 
-  const handleEscalate = () => {
-    setEscalated(true);
-    onEscalate(conversation.id);
-    toast.warning(`Conversation escalated to owner — ${conversation.customer}`, {
-      description: 'You will be notified when the owner replies.',
-    });
-  };
-
-  const handleSendOwnerReply = () => {
+  const handleSendOwnerReply = async () => {
     if (!replyText.trim()) return;
-    setDisplayMessages((prev) => [
-      ...prev,
-      {
-        id: `owner-reply-${Date.now()}`,
-        sender: 'owner',
-        text: replyText,
-        time: new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
-    setReplyText('');
-    toast.success('Reply sent as Owner');
+
+    const textToSend = replyText;
+    setReplyText(''); // Clear input immediately for UX
+
+    // 1. Save to Database
+    const result = await addMessage(conversation.id, 'owner', textToSend);
+
+    if (result.success) {
+      // 2. Update UI locally
+      setDisplayMessages((prev) => [
+        ...prev,
+        {
+          id: result.data?.id || `owner-reply-${Date.now()}`,
+          sender: 'owner',
+          text: textToSend,
+          time: new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+      toast.success('Reply saved and status updated to Owner Replied');
+    } else {
+      toast.error('Failed to save message to database');
+    }
   };
 
   return (
@@ -157,23 +156,7 @@ export default function ConversationThread({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!escalated && (
-            <button
-              onClick={handleEscalate}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100 transition-colors active:scale-95"
-            >
-              <AlertTriangle size={13} />
-              Escalate to Owner
-            </button>
-          )}
-          {escalated && (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-xs font-medium mono">
-              <AlertTriangle size={13} />
-              Escalated
-            </span>
-          )}
-        </div>
+        <div className="flex items-center gap-2" />
       </div>
 
       {/* Viral spike indicator */}

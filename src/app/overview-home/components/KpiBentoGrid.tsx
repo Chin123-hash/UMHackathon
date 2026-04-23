@@ -5,7 +5,6 @@ import {
   MessageSquare,
   Clock,
   ShoppingCart,
-  AlertTriangle,
   CheckCircle2,
   ArrowUpRight,
   ArrowDownRight,
@@ -35,7 +34,6 @@ function KpiCard({
   trend,
   icon,
   colorClass,
-  bgClass,
   iconBgClass,
   alert,
   hero,
@@ -93,24 +91,25 @@ function KpiCard({
   return content;
 }
 
-// 1. ADD THE TYPESCRIPT INTERFACE FOR THE DATA PROP
-interface DashboardKpis {
+export interface DashboardKpis {
   totalMessages: number;
   botHandled: number;
   activeChats: number;
   ordersToday: number;
+  unansweredConversations: number;
+  avgReplyTimeSeconds: number;
 }
 
-// 2. ACCEPT THE DATA PROP IN THE COMPONENT
 export default function KpiBentoGrid({ data }: { data: DashboardKpis }) {
-  // Calculate the bot resolution rate safely
+  // Calculate the bot resolution rate based on today's live message data
   const resolutionRate = data.totalMessages > 0 
     ? ((data.botHandled / data.totalMessages) * 100).toFixed(1) 
     : "0";
+  const avgReplyTimeLabel = `${data.avgReplyTimeSeconds.toFixed(1)}s`;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
-      {/* Hero card — spans 2 cols on xl+ */}
+      {/* Main KPI — spans 2 columns on large screens */}
       <div className="xl:col-span-2">
         <KpiCard
           title="Messages Handled Today"
@@ -128,16 +127,16 @@ export default function KpiBentoGrid({ data }: { data: DashboardKpis }) {
       {/* Avg Reply Time */}
       <KpiCard
         title="Avg Reply Time"
-        value="1.2s"
+        value={avgReplyTimeLabel}
         sub="Bot response latency — target <5s"
-        trend={{ value: '-0.2s vs average', positive: true }}
+        trend={{ value: data.avgReplyTimeSeconds <= 5 ? 'Within target' : 'Above target', positive: data.avgReplyTimeSeconds <= 5 }}
         icon={<Clock size={18} />}
         colorClass="text-green-600"
         bgClass="bg-white"
         iconBgClass="bg-green-50"
       />
 
-      {/* Orders Tracked */}
+      {/* Orders Taken Today */}
       <KpiCard
         title="Orders Taken Today"
         value={data.ordersToday.toString()}
@@ -150,7 +149,7 @@ export default function KpiBentoGrid({ data }: { data: DashboardKpis }) {
         href="/orders-shipping"
       />
 
-      {/* Active Chats */}
+      {/* Unique Customers */}
       <KpiCard
         title="Unique Customers"
         value={data.activeChats.toString()}
@@ -162,15 +161,16 @@ export default function KpiBentoGrid({ data }: { data: DashboardKpis }) {
         href="/inbox"
       />
 
-      {/* Escalations / Manual */}
+      {/* Manual Replies Required — Now using real conversation state logic */}
       <KpiCard
         title="Manual Replies Required"
-        value={(data.totalMessages - data.botHandled).toString()}
-        sub="Messages not fully resolved by bot"
+        value={data.unansweredConversations.toString()}
+        sub="Active chats awaiting owner response"
         icon={<CheckCircle2 size={18} />}
         colorClass="text-red-500"
         bgClass="bg-white"
         iconBgClass="bg-red-50"
+        alert={data.unansweredConversations > 0}
         href="/inbox"
       />
     </div>

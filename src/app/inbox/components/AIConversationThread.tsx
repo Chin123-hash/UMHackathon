@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import {
-  AlertTriangle,
   Send,
   Bot,
   User,
@@ -12,6 +11,7 @@ import {
 import StatusBadge from "@/components/ui/StatusBadge";
 import { toast } from "sonner";
 import { createBrowserClient } from '@supabase/ssr';
+import { addMessage } from "@/lib/actions/messages";
 
 export interface Conversation {
   id: string;
@@ -26,7 +26,6 @@ export interface Conversation {
 interface AIConversationThreadProps {
   conversation: Conversation;
   viralSpike: boolean;
-  onEscalate: (id: string) => void;
 }
 
 interface Message {
@@ -38,9 +37,7 @@ interface Message {
 export default function AIConversationThread({
   conversation,
   viralSpike,
-  onEscalate,
 }: AIConversationThreadProps) {
-  const [escalated, setEscalated] = useState(conversation.status === "escalated");
   const [ownerReplyText, setOwnerReplyText] = useState("");
   const [customerInput, setCustomerInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -82,7 +79,6 @@ export default function AIConversationThread({
       
       if (isMounted) {
         setIsLoadingHistory(false);
-        setEscalated(conversation.status === "escalated");
       }
     };
 
@@ -91,7 +87,7 @@ export default function AIConversationThread({
     return () => {
       isMounted = false;
     };
-  }, [conversation.id, conversation.status, supabase]);
+  }, [conversation.id, supabase]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -145,32 +141,29 @@ export default function AIConversationThread({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viralSpike, conversation.id]);
 
-  const handleEscalate = () => {
-    setEscalated(true);
-    onEscalate(conversation.id);
-    toast.warning(
-      `Conversation escalated to owner — ${conversation.customer}`,
-      {
-        description: "You will be notified when the owner replies.",
-      }
-    );
-  };
-
-  const handleSendOwnerReply = () => {
+  const handleSendOwnerReply = async () => {
     if (!ownerReplyText.trim()) return;
-    appendMessage("assistant", `[Owner Reply] ${ownerReplyText}`);
     
-    // Save owner reply to Supabase directly
-    supabase.from('messages').insert([{
-      conversation_id: conversation.id,
-      sender: 'owner', // Keep track that the owner sent this
-      text: `[Owner Reply] ${ownerReplyText}`
-    }]).then(({error}) => {
-       if(error) console.error("Failed to save owner reply:", error);
-    });
-
+    const textToSend = `[Owner Reply] ${ownerReplyText}`;
     setOwnerReplyText("");
-    toast.success("Reply sent as Owner");
+
+    // Use our server action which now handles the 'status' column correctly
+    const result = await addMessage(conversation.id, 'owner', textToSend);
+
+    if (result.success) {
+       // Update the local messages state
+       setMessages((prev) => [
+         ...prev,
+         {
+           id: result.data?.id || Date.now().toString(),
+           role: "assistant",
+           content: textToSend,
+         },
+       ]);
+       toast.success("Status updated to Owner Replied");
+    } else {
+       toast.error("Database sync failed");
+    }
   };
 
   const handleCustomerSubmit = (e: React.FormEvent) => {
@@ -203,23 +196,7 @@ export default function AIConversationThread({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!escalated && (
-            <button
-              onClick={handleEscalate}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100 transition-colors active:scale-95"
-            >
-              <AlertTriangle size={13} />
-              Escalate to Owner
-            </button>
-          )}
-          {escalated && (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-xs font-medium mono">
-              <AlertTriangle size={13} />
-              Escalated
-            </span>
-          )}
-        </div>
+        <div className="flex items-center gap-2" />
       </div>
 
       {/* Viral spike indicator */}

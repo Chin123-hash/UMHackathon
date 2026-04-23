@@ -71,9 +71,14 @@ export async function POST(req: Request) {
 
     // --- 2. LOG CUSTOMER MESSAGE ---
     if (conversationId) {
-      await supabase.from("messages").insert([{ conversation_id: conversationId, sender: "customer", text: message }]);
+      await supabase.from("messages").insert([{ 
+        conversation_id: conversationId, 
+        sender: "customer", 
+        text: message,
+        status: "unanswered" // Explicitly mark as unanswered
+      }]);
     }
-
+    
     // --- 3. FETCH CONTEXT (Now including Description) ---
     // We explicitly select the description column
     const { data: products } = await supabase
@@ -186,7 +191,12 @@ export async function POST(req: Request) {
 
     // --- 5. LOG BOT REPLY ---
     if (conversationId) {
-      await supabase.from("messages").insert([{ conversation_id: conversationId, sender: "bot", text: botReply }]);
+      await supabase.from("messages").insert([{ 
+        conversation_id: conversationId, 
+        sender: "bot", 
+        text: botReply,
+        status: "bot-responded" // Explicitly mark as bot-responded
+      }]);
     }
 
     return NextResponse.json({ reply: botReply });

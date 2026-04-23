@@ -1,16 +1,15 @@
 import React from 'react';
 
-type StatusType =
-  | 'bot-responded' |'owner-replied' |'unanswered' |'escalated' |'shipped' |'pending' |'to-ship' |'delivered' |'low-stock' |'out-of-stock' |'in-stock' |'active' |'inactive';
+export type StatusType =
+  | 'bot-responded' |'owner-replied' |'unanswered' |'shipped' |'pending' |'to-ship' |'delivered' |'low-stock' |'out-of-stock' |'in-stock' |'active' |'inactive';
 
 const statusConfig: Record<StatusType, { label: string; className: string }> = {
   'bot-responded': { label: 'Bot Responded', className: 'badge-bot' },
   'owner-replied': { label: 'Owner Replied', className: 'badge-owner' },
   unanswered: { label: 'Unanswered', className: 'badge-unanswered' },
-  escalated: { label: 'Escalated', className: 'badge-escalated' },
   shipped: { label: 'Shipped', className: 'badge-shipped' },
   pending: { label: 'Pending', className: 'badge-pending' },
-  'to-ship': { label: 'To Ship', className: 'badge-escalated' },
+  'to-ship': { label: 'To Ship', className: 'badge-pending' },
   delivered: { label: 'Delivered', className: 'badge-owner' },
   'low-stock': { label: 'Low Stock', className: 'badge-lowstock' },
   'out-of-stock': { label: 'Out of Stock', className: 'badge-outofstock' },

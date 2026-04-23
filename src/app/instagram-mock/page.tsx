@@ -240,7 +240,7 @@ function FeedPost({
             </div>
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">nabilahfashion.my</p>
+            <p className="text-sm font-semibold text-gray-900">Instagram</p>
             <p className="text-xs text-gray-400">{product.location}</p>
           </div>
         </div>
