@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   ShoppingCart,
@@ -19,10 +19,11 @@ import {
   MapPin,
   Bell,
   Home,
-  Tag } from
-'lucide-react';
+  Tag 
+} from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
-
+import { createBrowserClient } from '@supabase/ssr'; // Added for live data
+import { toast } from 'sonner'; // Added for feedback
 
 /* ─── Types ─── */
 interface Product {
@@ -44,7 +45,7 @@ interface Product {
 
 interface ChatMessage {
   id: string;
-  sender: 'customer' | 'bot' | 'owner';
+  sender: 'customer' | 'bot' | 'owner' | 'system';
   text: string;
   time: string;
 }
@@ -52,7 +53,7 @@ interface ChatMessage {
 /* ─── Mock Data ─── */
 const products: Product[] = [
 {
-  id: 'p-001',
+  id: 'p-001-L',
   name: 'Baju Kurung Moden Sulam Bunga – NabilahFashion',
   price: 89.9,
   originalPrice: 129.9,
@@ -68,7 +69,7 @@ const products: Product[] = [
   description: 'Baju kurung moden dengan sulaman bunga halus. Kain premium, selesa dipakai seharian. Sesuai untuk majlis & harian.'
 },
 {
-  id: 'p-002',
+  id: 'p-002-L',
   name: 'Blouse Chiffon Raya Exclusive – NabilahFashion',
   price: 59.9,
   originalPrice: 79.9,
@@ -84,7 +85,7 @@ const products: Product[] = [
   description: 'Blouse chiffon ringan & elegan. Potongan A-line yang menyembunyikan perut. Boleh mix & match dengan pelbagai bawahan.'
 },
 {
-  id: 'p-003',
+  id: 'p-003-L',
   name: 'Dress Batik Viral Corak Pelangi',
   price: 75.0,
   originalPrice: 99.0,
@@ -100,7 +101,7 @@ const products: Product[] = [
   description: 'Dress batik corak pelangi yang viral di TikTok! Kain batik cotton premium, selesa & cantik. Free size friendly.'
 },
 {
-  id: 'p-004',
+  id: 'p-004-FS',
   name: 'Tudung Bawal Premium Sulam – 10 Warna',
   price: 35.9,
   originalPrice: 49.9,
@@ -116,7 +117,7 @@ const products: Product[] = [
   description: 'Tudung bawal premium dengan sulaman tepi yang cantik. Kain satin silk, tak panas & mudah dipakai. Tersedia 10 warna pilihan.'
 },
 {
-  id: 'p-005',
+  id: 'p-005-L',
   name: 'Palazzo Pants Linen Wide Leg',
   price: 45.9,
   image: "https://img.rocket.new/generatedImages/rocket_gen_img_1abe5bd75-1772474934368.png",
@@ -130,7 +131,7 @@ const products: Product[] = [
   description: 'Palazzo pants linen yang selesa & stylish. Potongan wide leg yang trendy. Sesuai untuk kerja & casual.'
 },
 {
-  id: 'p-006',
+  id: 'p-006-L',
   name: 'Set Baju Melayu Moden Slim Fit',
   price: 119.9,
   originalPrice: 159.9,
@@ -146,7 +147,7 @@ const products: Product[] = [
   description: 'Set baju melayu moden potongan slim fit. Kain teluk belanga premium. Lengkap dengan sampin & butang.'
 }];
 
-
+// Mock logic kept for fallback/reference but bypassed by the API
 const botReplies: Record<string, string> = {
   default: 'Terima kasih kerana menghubungi NabilahFashion! 😊 Boleh saya bantu anda?',
   stock: 'Stok masih ada untuk saiz yang anda pilih! Nak terus buat order? 🛍️',
@@ -169,6 +170,7 @@ function detectIntent(msg: string): string {
 }
 
 /* ─── Sub-components ─── */
+// (ShopeeHeader, ProductCard, ProductDetail, CartToast are kept exactly the same)
 function ShopeeHeader({ cartCount, onCartClick }: {cartCount: number;onCartClick: () => void;}) {
   return (
     <header className="bg-[#EE4D2D] text-white sticky top-0 z-30 shadow-md">
@@ -460,175 +462,193 @@ function ProductDetail({
 
 }
 
-function ChatPanel({
-  product,
-  onClose
-
-
-
-}: {product: Product | null;onClose: () => void;}) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-  {
-    id: 'init-1',
-    sender: 'bot',
-    text: `Hai! Selamat datang ke ${product?.shopName ?? 'NabilahFashion.my'} 👋 Ada yang boleh kami bantu?`,
-    time: new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })
-  },
-  ...(product ?
-  [
-  {
-    id: 'init-2',
-    sender: 'bot' as const,
-    text: `Saya nampak anda berminat dengan "${product.name}". Ada soalan tentang saiz, stok, atau penghantaran? 😊`,
-    time: new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })
-  }] :
-
-  [])]
-  );
+function ChatPanel({ product, onClose }: {product: Product | null; onClose: () => void;}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const bottomRef = React.useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const quickReplies = product ?
-  [
-  `stk size M ada?`,
-  `pos ke sabah rm?`,
-  `boleh COD tak?`,
-  `bila restock?`] :
+  const conversationId = "customer-shopee-demo-001"; // Stable ID
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!, 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-  ['Ada stok?', 'Harga berapa?', 'Boleh return?'];
+  // Fetch Live History from Supabase
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
 
-  const sendMessage = (text: string) => {
+      if (data) {
+        setMessages(data.map(m => ({
+          id: m.id,
+          sender: m.sender as any,
+          text: m.text,
+          time: new Date(m.created_at).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })
+        })));
+      }
+    };
+    fetchHistory();
+  }, [supabase, conversationId]);
+
+  const quickReplies = [`stk size M ada?`, `Confirm Order & Pay`, `pos ke sabah rm?`];
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState<any>(null);
+
+  const sendMessage = async (text: string) => {
     if (!text.trim()) return;
+    
+    // 1. Add user message to UI
     const now = new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' });
-    const userMsg: ChatMessage = { id: `msg-${Date.now()}`, sender: 'customer', text, time: now };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'customer', text, time: now }]);
     setInput('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      const intent = detectIntent(text);
-      const reply = botReplies[intent] ?? botReplies.default;
-      setIsTyping(false);
-      setMessages((prev) => [
-      ...prev,
-      { id: `bot-${Date.now()}`, sender: 'bot', text: reply, time: now }]
-      );
-    }, 1200 + Math.random() * 600);
-  };
+    try {
+      // 2. Fetch from our API
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: "demo-user-1", message: text, productId: product?.id })
+      });
 
-  React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+      const data = await res.json();
+      let reply = data.reply;
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      {/* Header */}
-      <div className="bg-[#EE4D2D] text-white px-4 py-3 flex items-center gap-3">
-        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded transition-colors">
-          <ChevronLeft size={20} />
-        </button>
-        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">
-          NF
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold">NabilahFashion.my</p>
-          <div className="flex items-center gap-1 text-xs text-white/80">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block" />
-            Online · Balas dalam &lt;1 min
-          </div>
-        </div>
-        <button onClick={onClose}>
-          <X size={18} className="opacity-70 hover:opacity-100" />
-        </button>
-      </div>
-
-      {/* Product context banner */}
-      {product &&
-      <div className="bg-orange-50 border-b border-orange-100 px-4 py-2 flex items-center gap-2">
-          <img src={product.image} alt={product.name} className="w-10 h-10 rounded object-cover" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-700 truncate font-medium">{product.name}</p>
-            <p className="text-xs text-[#EE4D2D] font-bold">RM{product.price.toFixed(2)}</p>
-          </div>
-          <Tag size={14} className="text-orange-400 shrink-0" />
-        </div>
+      // 3. CHECK FOR THE POPUP TRIGGER
+      const confirmTag = reply.match(/\[SHOW_CONFIRMATION: (.*?)\]/);
+      if (confirmTag) {
+        const orderData = JSON.parse(confirmTag[1]);
+        setPendingOrder(orderData);
+        
+        // Remove the ugly tag from the chat bubble
+        reply = reply.replace(confirmTag[0], "").trim();
+        
+        // TRIGGER THE POPUP
+        setTimeout(() => setIsModalOpen(true), 1000); 
       }
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-3 space-y-3 bg-[#f5f5f5]">
-        {messages.map((msg) =>
-        <div
-          key={msg.id}
-          className={`flex items-end gap-2 ${msg.sender === 'customer' ? 'flex-row-reverse' : 'flex-row'}`}>
-          
-            {msg.sender !== 'customer' &&
-          <div className="w-6 h-6 rounded-full bg-[#EE4D2D] flex items-center justify-center shrink-0 mb-0.5">
-                <Bot size={12} className="text-white" />
-              </div>
-          }
-            <div
-            className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm leading-relaxed shadow-sm ${
-            msg.sender === 'customer' ? 'bg-[#EE4D2D] text-white rounded-br-sm' : 'bg-white text-gray-800 rounded-bl-sm'}`
-            }>
-            
-              <p>{msg.text}</p>
-              <p className={`text-xs mt-0.5 ${msg.sender === 'customer' ? 'text-white/70 text-right' : 'text-gray-400'}`}>
-                {msg.time}
-              </p>
-            </div>
-          </div>
-        )}
+      setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'bot', text: reply, time: now }]);
+    } catch (e) {
+      toast.error("Gagal menghubungi bot.");
+    } finally {
+      setIsTyping(false);
+    }
+  };
 
-        {isTyping &&
-        <div className="flex items-end gap-2">
-            <div className="w-6 h-6 rounded-full bg-[#EE4D2D] flex items-center justify-center shrink-0">
-              <Bot size={12} className="text-white" />
-            </div>
-            <div className="bg-white px-3 py-2.5 rounded-2xl rounded-bl-sm shadow-sm">
-              <div className="flex gap-1">
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-                <span className="typing-dot" />
+// 4. FUNCTION CALLED WHEN USER CLICKS "YES" IN POPUP
+const handleFinalConfirm = async () => {
+  setIsModalOpen(false);
+  setIsTyping(true);
+  
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ 
+      conversationId: "demo-user-1", 
+      message: "ACTION_CONFIRM_ORDER", 
+      productId: pendingOrder.id,
+      qty: pendingOrder.qty 
+    })
+  });
+  
+  const data = await res.json();
+  const now = new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' });
+  setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'bot', text: data.reply, time: now }]);
+  setIsTyping(false);
+};
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isTyping]);
+
+  return (
+    <>
+      {/* --- Main Chat Panel --- */}
+      <div className="fixed inset-0 z-50 flex flex-col bg-white">
+        {/* Header */}
+        <div className="bg-[#EE4D2D] text-white px-4 py-3 flex items-center gap-3">
+          <button onClick={onClose}><ChevronLeft size={20} /></button>
+          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center font-bold">NF</div>
+          <div className="flex-1"><p className="text-sm font-semibold">NabilahFashion.my</p></div>
+          <button onClick={onClose}><X size={18} /></button>
+        </div>
+  
+        {/* Message Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f5f5f5]">
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex items-end gap-2 ${msg.sender === 'customer' ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${
+                msg.sender === 'customer' ? 'bg-[#EE4D2D] text-white rounded-br-none' : 
+                msg.sender === 'system' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-white text-gray-800 rounded-bl-none'
+              }`}>
+                {msg.text}
               </div>
             </div>
-          </div>
-        }
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Quick replies */}
-      <div className="bg-white border-t border-gray-100 px-3 py-2 flex gap-2 overflow-x-auto scrollbar-none">
-        {quickReplies.map((qr) =>
-        <button
-          key={qr}
-          onClick={() => sendMessage(qr)}
-          className="whitespace-nowrap text-xs px-3 py-1.5 rounded-full border border-[#EE4D2D] text-[#EE4D2D] hover:bg-red-50 transition-colors shrink-0">
-          
-            {qr}
+          ))}
+          <div ref={bottomRef} />
+        </div>
+  
+        {/* Quick Replies */}
+        <div className="bg-white border-t p-2 flex gap-2 overflow-x-auto scrollbar-none">
+          {quickReplies.map(qr => (
+            <button key={qr} onClick={() => sendMessage(qr)} className="whitespace-nowrap text-[10px] px-3 py-1.5 rounded-full border border-[#EE4D2D] text-[#EE4D2D]">{qr}</button>
+          ))}
+        </div>
+  
+        {/* Input Area */}
+        <div className="p-3 border-t flex gap-2">
+          <input 
+            value={input} 
+            onChange={e => setInput(e.target.value)} 
+            onKeyDown={e => e.key === 'Enter' && sendMessage(input)} 
+            placeholder="Taip mesej..." 
+            className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm outline-none" 
+          />
+          <button onClick={() => sendMessage(input)} className="bg-[#EE4D2D] text-white p-2 rounded-full">
+            <Send size={16} />
           </button>
-        )}
+        </div>
       </div>
-
-      {/* Input */}
-      <div className="bg-white border-t border-gray-200 px-3 py-2.5 flex items-center gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
-          placeholder="Taip mesej anda..."
-          className="flex-1 text-sm bg-gray-100 rounded-full px-4 py-2 outline-none placeholder:text-gray-400" />
-        
-        <button
-          onClick={() => sendMessage(input)}
-          disabled={!input.trim()}
-          className="w-9 h-9 bg-[#EE4D2D] rounded-full flex items-center justify-center disabled:opacity-40 hover:bg-[#d94224] transition-colors">
-          
-          <Send size={15} className="text-white" />
-        </button>
-      </div>
-    </div>);
-
+  
+      {/* --- Confirmation Modal --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-xs p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-4 text-[#EE4D2D]">
+                <ShoppingCart size={24} />
+              </div>
+              
+              <h3 className="font-bold text-lg mb-2 text-gray-800">Sahkan Pesanan?</h3>
+              
+              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                Adakah anda pasti ingin memesan <span className="font-bold text-gray-700">{pendingOrder?.qty}x {pendingOrder?.name}</span>?
+              </p>
+  
+              <div className="flex w-full gap-3">
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 active:scale-95 transition-all"
+                >
+                  Nanti Dulu
+                </button>
+                <button 
+                  onClick={handleFinalConfirm}
+                  className="flex-1 py-2.5 rounded-xl bg-[#EE4D2D] text-white text-sm font-bold hover:bg-[#d94224] shadow-lg shadow-orange-200 active:scale-95 transition-all"
+                >
+                  Ya, Sahkan!
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 function CartToast({ count, onClose }: {count: number;onClose: () => void;}) {
