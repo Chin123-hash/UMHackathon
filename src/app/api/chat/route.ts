@@ -103,53 +103,84 @@ export async function POST(req: Request) {
     // --- 4. AI PROVIDERS ---
 
     // Option A: Z.ai / ILMU-GLM-5.1
+    
+    // Option A: Z.ai / ILMU-GLM-5.1
     if (process.env.ZAI_API_KEY && !process.env.ZAI_API_KEY.includes("your-zai")) {
       const traceId = Math.random().toString(36).substring(7);
       console.group(`[TRACE-${traceId}] Z.ai Request`);
+      
+      const startTime = Date.now();
       const apiKey = process.env.ZAI_API_KEY.trim();
 
       try {
         const res = await fetch('https://api.ilmu.ai/anthropic/v1/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+          headers: { 
+            'Content-Type': 'application/json', 
+            'x-api-key': apiKey 
+          },
           body: JSON.stringify({
             model: 'ilmu-glm-5.1',
             system: systemPrompt,
             max_tokens: 1024,
             messages: [{ role: 'user', content: message }]
           }),
-          signal: AbortSignal.timeout(8000)
+          signal: AbortSignal.timeout(50000) // Increased to 10s for stability
         });
+
+        const duration = Date.now() - startTime;
 
         if (res.ok) {
           const data = await res.json();
           botReply = data.content[0].text;
-          console.log("SUCCESS: Z.ai replied.");
+          console.log(`✅ SUCCESS: Z.ai replied in ${duration}ms`);
         } else {
-            console.error("Z.ai Error:", res.status);
+          // --- DETAILED FAILURE LOGGING ---
+          const errorText = await res.text(); // Capture the actual error message or HTML
+          console.error(`❌ Z.ai FAILED (${res.status} ${res.statusText})`);
+          console.error(`   Ray-ID: ${res.headers.get('cf-ray') || 'N/A'}`);
+          console.error(`   Duration: ${duration}ms`);
+          
+          try {
+            // Attempt to parse as JSON if possible, otherwise show raw text
+            const errorJson = JSON.parse(errorText);
+            console.error("   Error Detail:", JSON.stringify(errorJson, null, 2));
+          } catch {
+            // If it's a 502/504 error, this will likely be a snippet of HTML
+            console.error("   Error Body Snippet:", errorText.substring(0, 500));
+          }
+
+          // Helpful hints based on status codes
+          if (res.status === 502) console.warn("   💡 HINT: Bad Gateway. The AI server is likely down or restarting.");
+          if (res.status === 401) console.warn("   💡 HINT: Unauthorized. Double check your ANTHROPIC_AUTH_TOKEN in .env.");
+          if (res.status === 404) console.warn("   💡 HINT: Not Found. Check the endpoint URL or Model Key name.");
         }
       } catch (err: any) {
-        console.error("Z.ai Connection Error:", err.message);
+        if (err.name === 'AbortError') {
+          console.error("❌ Z.ai TIMEOUT: The server took longer than 10s to respond.");
+        } else {
+          console.error("❌ Z.ai CONNECTION ERROR:", err.message);
+        }
       }
       console.groupEnd();
     }
 
     // Option B: Groq Fallback
-    if (!botReply && process.env.GROQ_API_KEY) {
-      console.log("Routing to Groq...");
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        botReply = data.choices[0].message.content;
-      }
-    }
+    // if (!botReply && process.env.GROQ_API_KEY) {
+    //   console.log("Routing to Groq...");
+    //   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    //     method: 'POST',
+    //     headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({
+    //       model: 'llama-3.3-70b-versatile',
+    //       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
+    //     })
+    //   });
+    //   if (res.ok) {
+    //     const data = await res.json();
+    //     botReply = data.choices[0].message.content;
+    //   }
+    // }
 
     botReply = botReply || "Maaf, sistem sedang sibuk sebentar. Sila cuba lagi ya? 🙏";
 
