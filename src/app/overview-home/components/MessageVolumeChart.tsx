@@ -61,7 +61,7 @@ export default function MessageVolumeChart({ data }: { data: VolumeData[] }) {
             <span className="text-muted-foreground">Bot Handled</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
+            <span className="w-2 h-2 rounded-full bg-red-500" />
             <span className="text-muted-foreground">Owner Replied</span>
           </div>
         </div>
