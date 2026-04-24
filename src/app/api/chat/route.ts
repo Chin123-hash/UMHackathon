@@ -1,5 +1,7 @@
+
 import { NextResponse } from 'next/server';
 import { createClient } from "@/lib/supabase/server";
+import { createOrder } from "@/lib/actions/orders";
 
 export const maxDuration = 30;
 
@@ -11,7 +13,7 @@ type ChatMessage = {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { message, conversationId, productId, qty = 1 } = body;
+    const { message, conversationId, productId, qty = 1, totalPrice = 0, customerName = "Guest", destination = "Selangor" } = body;
     
     if (!message) return NextResponse.json({ error: "Message required" }, { status: 400 });
 
@@ -20,30 +22,52 @@ export async function POST(req: Request) {
     // --- 1. HANDLE FINAL PURCHASE CONFIRMATION ---
     if (message === "ACTION_CONFIRM_ORDER") {
       const targetId = productId || "p-001-M";
-      const { error: stockError } = await supabase.rpc('decrement_stock', { row_id: targetId, qty: qty });
       
+      // Stock Update
+      const { error: stockError } = await supabase.rpc('decrement_stock', { row_id: targetId, qty: qty });
       if (stockError) return NextResponse.json({ reply: "Maaf sis, stok baru habis! 🙏" });
 
+      // Save Order to DB (Feature 1)
+      const { success: orderSuccess, data: orderData } = await createOrder({
+        product_id: targetId,
+        quantity: qty,
+        total_price: totalPrice,
+        customer: customerName,
+        destination: destination,
+        status: 'pending'
+      });
+
+      // Notify Seller (Feature 1)
       await supabase.from("messages").insert([{ 
         conversation_id: conversationId, 
         sender: "system", 
-        text: `🚨 ORDER CONFIRMED: ${qty}x [${targetId}].` 
+        text: `🚨 NEW ORDER RECEIVED: ${customerName} bought ${qty}x [${targetId}]. Order ID: ${orderData?.id.slice(0,8)}.` 
       }]);
 
-      return NextResponse.json({ reply: "Alhamdulillah! Pesanan anda telah disahkan. 😊" });
+      return NextResponse.json({ reply: "Alhamdulillah! Pesanan anda telah disahkan dan disimpan dalam sistem. Seller akan proses segera. 😊" });
     }
 
-    // --- 2. LOG & FETCH HISTORY ---
+    // --- 2. LOG & FETCH HISTORY & CHECK FAILURES (Feature 3) ---
     let chatHistory: ChatMessage[] = [];
+    let failureCount = 0;
+
     if (conversationId) {
       const { data: historyData } = await supabase
         .from("messages")
-        .select("sender, text")
+        .select("sender, text, status")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: false })
-        .limit(8);
+        .limit(10);
 
       if (historyData) {
+        // Count consecutive bot failures
+        for (const msg of historyData) {
+          if (msg.sender === 'bot') {
+            if (msg.status === 'failed') failureCount++;
+            else break; // Reset if we find a successful response
+          }
+        }
+
         chatHistory = historyData.reverse().map(msg => ({
           role: msg.sender === 'customer' ? 'user' : 'assistant' as const,
           content: msg.text
@@ -53,6 +77,21 @@ export async function POST(req: Request) {
       await supabase.from("messages").insert([{ 
         conversation_id: conversationId, sender: "customer", text: message, status: "unanswered"
       }]);
+    }
+
+    // Escalation Logic (Feature 3)
+    if (failureCount >= 2) { // 2 failures already, this will be the 3rd attempt
+        // Notify Seller
+        await supabase.from("messages").insert([{ 
+            conversation_id: conversationId, 
+            sender: "system", 
+            text: `⚠️ ESCALATION: AI bot failed 3 times. Human intervention required for ${conversationId}.` 
+        }]);
+        
+        // Change conversation status to unanswered to alert owner
+        await supabase.from("messages").update({ status: 'unanswered' }).eq('conversation_id', conversationId);
+
+        return NextResponse.json({ reply: "Maaf sis, sistem AI saya sedang mengalami masalah teknikal. Saya sudah maklumkan kepada owner untuk reply sis secara manual sebentar lagi ya. 🙏" });
     }
     
     // --- 3. FETCH CONTEXT ---
@@ -67,7 +106,7 @@ export async function POST(req: Request) {
     }).join("\n");
 
     // --- 4. SYSTEM PROMPT ---
-    const systemPrompt = `You are SellerMate AI.
+    const systemPrompt = `You are SellerMate AI. Use localized Malay slang ('sis', 'boss', 'ye').
     
     CRITICAL RULES:
     1. REQUEST FULL ADDRESS: You must ask for the COMPLETE shipping address.
@@ -76,7 +115,7 @@ export async function POST(req: Request) {
     4. NO BYPASSING: Never skip shipping fees. If the address is incomplete, ask: "Boleh bagi alamat penuh sis?"
 
     CALCULATION: Total = (Product Price * Qty) + Shipping Fee.
-    [SHOW_CONFIRMATION: {"id": "prod_id", "qty": num, "name": "name", "total": price}]
+    [SHOW_CONFIRMATION: {"id": "prod_id", "qty": num, "name": "name", "total": price, "customerName": "name", "destination": "state"}]
 
     DATA:
     Inventory: ${inventoryContext}
@@ -85,9 +124,8 @@ export async function POST(req: Request) {
     let botReply = "";
     const apiKey = process.env.ZAI_API_KEY;
 
-    // --- 5. AI EXECUTION WITH DETAILED LOGGING ---
+    // --- 5. AI EXECUTION ---
     if (apiKey && !apiKey.includes("your-zai")) {
-      const startTime = Date.now();
       try {
         const res = await fetch('https://api.ilmu.ai/anthropic/v1/messages', {
           method: 'POST',
@@ -101,36 +139,21 @@ export async function POST(req: Request) {
           signal: AbortSignal.timeout(50000)
         });
 
-        const duration = Date.now() - startTime;
-
         if (res.ok) {
           const data = await res.json();
           botReply = data.content[0].text;
-          console.log(`✅ Z.ai Success: ${duration}ms`);
         } else {
-          // --- ADDED ERROR LOGGING ---
-          const errorText = await res.text();
-          console.error(`❌ Z.ai FAILED (${res.status} ${res.statusText})`);
-          console.error(`   Ray-ID: ${res.headers.get('cf-ray') || 'N/A'}`);
-          console.error(`   Duration: ${duration}ms`);
-          
-          try {
-            const errorJson = JSON.parse(errorText);
-            console.error("   Error Detail:", JSON.stringify(errorJson, null, 2));
-          } catch {
-            console.error("   Error Body Snippet:", errorText.substring(0, 500));
-          }
-
-          if (res.status === 502) console.warn("   💡 HINT: Bad Gateway. AI server is likely down.");
-          if (res.status === 401) console.warn("   💡 HINT: Unauthorized. Check ZAI_API_KEY.");
-          if (res.status === 404) console.warn("   💡 HINT: Not Found. Check endpoint/model name.");
+           throw new Error("API Failure");
         }
       } catch (err: any) {
-        if (err.name === 'AbortError') {
-          console.error("❌ Z.ai TIMEOUT");
-        } else {
-          console.error("❌ Z.ai CONNECTION ERROR:", err.message);
+        console.error("Z.ai Error:", err.message);
+        // Log failure to DB for feature 3
+        if (conversationId) {
+            await supabase.from("messages").insert([{ 
+                conversation_id: conversationId, sender: "bot", text: "System Error. Please try again.", status: "failed"
+            }]);
         }
+        return NextResponse.json({ reply: "Maaf sis, sistem busy sikit. Cuba lagi ya? 🙏" });
       }
     }
 
@@ -145,7 +168,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ reply: botReply });
 
   } catch (error) {
-    console.error("CRITICAL ROUTE ERROR:", error);
     return NextResponse.json({ reply: "Sistem Error." }, { status: 500 });
   }
 }

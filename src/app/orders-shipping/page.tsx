@@ -4,7 +4,8 @@
 import React, { useState, useMemo } from 'react';
 import AppLayout from '@/components/AppLayout';
 import useSWR from 'swr';
-import { getAllOrders, DbOrder } from '@/lib/actions/orders';
+import { getAllOrders, DbOrder, updateOrderCourier } from '@/lib/actions/orders';
+import { getShippingRecommendations } from '@/lib/actions/analytics';
 import {
   Truck,
   Search,
@@ -18,11 +19,14 @@ import {
   ChevronDown,
   RefreshCw,
   Loader2,
+  Brain,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Order {
   id: string;
+  db_id: string; // Original UUID
   customer: string;
   items: string;
   platform: string;
@@ -34,6 +38,7 @@ interface Order {
   eastMalaysia: boolean;
 }
 
+// ✅ FIXED: Added missing statusConfig definition
 const statusConfig: Record<Order['status'], { label: string; classes: string; icon: React.ReactNode }> = {
   Pending: {
     label: 'Pending',
@@ -56,6 +61,96 @@ const statusConfig: Record<Order['status'], { label: string; classes: string; ic
     icon: <CheckCircle2 size={11} />,
   },
 };
+
+function ShippingComparisonModal({ order, onClose, onRefresh }: { order: Order, onClose: () => void, onRefresh: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any>(null);
+
+  const fetchRecs = async () => {
+    setLoading(true);
+    const res = await getShippingRecommendations(order.destination);
+    if (res.success) {
+      setData(res);
+    } else {
+      toast.error(res.message);
+    }
+    setLoading(false);
+  };
+
+  React.useEffect(() => {
+    fetchRecs();
+  }, [order.destination]);
+
+  const handleSelect = async (partner: string) => {
+    const tracking = `MY${Math.random().toString().slice(2, 14)}`;
+    toast.promise(updateOrderCourier(order.db_id, partner, tracking), {
+      loading: 'Assigning courier...',
+      success: () => {
+        onRefresh();
+        onClose();
+        return `Order assigned to ${partner}`;
+      },
+      error: 'Failed to update order'
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="px-6 py-4 border-b flex items-center justify-between bg-indigo-600 text-white">
+          <div className="flex items-center gap-2">
+            <Brain size={18} />
+            <h3 className="font-semibold">AI Shipping Comparison</h3>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Loader2 className="animate-spin text-indigo-600" size={32} />
+              <p className="text-sm text-muted-foreground animate-pulse">AI is comparing the best rates for {order.destination}...</p>
+            </div>
+          ) : data ? (
+            <div className="space-y-4">
+              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                <p className="text-xs font-bold text-indigo-700 uppercase tracking-widest mb-1">AI Recommendation</p>
+                <p className="text-sm text-indigo-900 leading-relaxed italic">"{data.aiSummary}"</p>
+              </div>
+
+              <div className="space-y-2">
+                {data.recommendations.map((rec: any, idx: number) => (
+                  <div key={idx} className="flex items-center justify-between p-3 border rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-all group">
+                    <div>
+                      <p className="font-semibold text-sm">{rec.partner}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <p className="text-xs text-muted-foreground">Cost: <span className="text-red-500 font-medium">RM{rec.sellerCost}</span></p>
+                        <p className="text-xs text-muted-foreground">Charge: <span className="text-green-600 font-medium">RM{rec.buyerCharge}</span></p>
+                        <p className="text-xs font-bold text-indigo-600">Profit: RM{rec.profit}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleSelect(rec.partner)}
+                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 active:scale-95 transition-all"
+                    >
+                      Select
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+             <div className="text-center py-8">
+               <p className="text-sm text-muted-foreground">No courier data found for this location.</p>
+             </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TrackingMessagePreview({ order }: { order: Order }) {
   const [copied, setCopied] = useState(false);
@@ -96,6 +191,7 @@ export default function OrdersShippingPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [comparingOrder, setComparingOrder] = useState<Order | null>(null);
 
   const { data: dbOrders, error, isLoading, mutate } = useSWR('all-orders', getAllOrders);
 
@@ -104,17 +200,21 @@ export default function OrdersShippingPage() {
     return dbOrders.map((dbOrder: DbOrder): Order => {
       let status: Order['status'] = 'Pending';
       if (dbOrder.status === 'completed') status = 'Delivered';
-      else if (dbOrder.tracking_no) status = 'Shipped';
+      else if (dbOrder.status === 'shipped') status = 'Shipped';
       else if (dbOrder.status === 'pending') status = 'Pending';
 
+      const dest = dbOrder.destination || 'Selangor';
+      const isEM = dest.toLowerCase().includes('sabah') || dest.toLowerCase().includes('sarawak');
+
       return {
-        id: dbOrder.id.slice(0, 13).toUpperCase(), // Simplified ID for UI
+        id: dbOrder.id.slice(0, 8).toUpperCase(),
+        db_id: dbOrder.id,
         customer: dbOrder.customer || 'Guest User',
         items: `${dbOrder.product_name || 'Product'} (×${dbOrder.quantity})`,
         platform: 'Shopee',
         status,
         trackingNo: dbOrder.tracking_no,
-        courier: dbOrder.tracking_no ? 'J&T Express' : null,
+        courier: dbOrder.courier_name,
         lastUpdated: new Date(dbOrder.created_at).toLocaleString('en-MY', {
           day: '2-digit',
           month: 'short',
@@ -123,8 +223,8 @@ export default function OrdersShippingPage() {
           minute: '2-digit',
           hour12: false
         }),
-        destination: 'Unknown Destination', // Placeholder
-        eastMalaysia: false, // Placeholder
+        destination: dest,
+        eastMalaysia: isEM,
       };
     });
   }, [dbOrders]);
@@ -321,18 +421,36 @@ export default function OrdersShippingPage() {
                             />
                           </td>
                         </tr>
-                        {isExpanded && order.status === 'Shipped' && (
-                          <tr>
-                            <td colSpan={7} className="px-4 pb-4 bg-green-50/30">
-                              <TrackingMessagePreview order={order} />
-                            </td>
-                          </tr>
-                        )}
-                        {isExpanded && order.status !== 'Shipped' && (
-                          <tr>
-                            <td colSpan={7} className="px-4 pb-4 bg-muted/20">
-                              <div className="mt-3 bg-white border border-border rounded-lg p-3 text-xs text-muted-foreground italic">
-                                Tracking message preview will appear once order status changes to <strong>Shipped</strong> and a tracking number is assigned.
+                        {isExpanded && (
+                          <tr className="bg-muted/10">
+                            <td colSpan={7} className="px-4 pb-4">
+                              <div className="flex flex-col gap-4 mt-2">
+                                {order.status === 'Pending' && (
+                                  <div className="flex items-center justify-between p-4 bg-white border border-dashed border-primary-300 rounded-xl">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600">
+                                        <Brain size={20} />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-semibold text-foreground">AI Shipping Comparison Available</p>
+                                        <p className="text-xs text-muted-foreground">Let AI help you find the cheapest courier for {order.destination}.</p>
+                                      </div>
+                                    </div>
+                                    <button 
+                                      onClick={() => setComparingOrder(order)}
+                                      className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-all flex items-center gap-2"
+                                    >
+                                      <Truck size={16} />
+                                      Compare Rates
+                                    </button>
+                                  </div>
+                                )}
+                                {order.status === 'Shipped' && <TrackingMessagePreview order={order} />}
+                                {order.status !== 'Shipped' && order.status !== 'Pending' && (
+                                  <div className="bg-white border border-border rounded-lg p-3 text-xs text-muted-foreground italic">
+                                    Tracking message preview will appear once order status changes to <strong>Shipped</strong>.
+                                  </div>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -348,13 +466,17 @@ export default function OrdersShippingPage() {
             <p className="text-xs text-muted-foreground">
               Showing <span className="font-medium text-foreground">{isLoading ? '...' : filtered.length}</span> of {isLoading ? '...' : mappedOrders.length} orders
             </p>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
-              <span className="text-xs text-muted-foreground mono">EM = East Malaysia (Sabah / Sarawak)</span>
-            </div>
           </div>
         </div>
       </div>
+
+      {comparingOrder && (
+        <ShippingComparisonModal 
+          order={comparingOrder} 
+          onClose={() => setComparingOrder(null)} 
+          onRefresh={mutate}
+        />
+      )}
     </AppLayout>
   );
 }

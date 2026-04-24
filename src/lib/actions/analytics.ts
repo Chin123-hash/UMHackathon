@@ -1,3 +1,4 @@
+
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
@@ -62,7 +63,8 @@ export async function getSalesAnalytics(days = 30): Promise<SalesAnalytics | nul
     
   if (error) return null;
   
-  const completed = (orders || []).filter(o => o.status === "completed" || o.status === "pending");
+  // Adapt: Inclusion of 'shipped' and 'completed' for revenue
+  const completed = (orders || []).filter(o => o.status === "completed" || o.status === "pending" || o.status === "shipped");
   const totalRevenue = completed.reduce((sum, o) => sum + Number(o.total_price), 0);
   
   const productMap = new Map<string, { quantity: number; revenue: number }>();
@@ -96,25 +98,24 @@ export async function getAIDailyBriefing(sales: SalesAnalytics, inventory: Inven
   const apiKey = process.env.ZAI_API_KEY;
   if (!apiKey || apiKey.includes("your-zai")) return "Briefing unavailable.";
 
-  // Node.js does the heavy analytical lifting
   const topProduct = sales.topProducts[0];
   const stockHealth = inventory.lowStockCount > 3 ? "Critical" : (inventory.lowStockCount > 0 ? "Needs Attention" : "Healthy");
 
   const prompt = `You are a retail data analyst for a Malaysian fashion store. Write a short, professional daily briefing for the store owner in Malay.
   
-Here is the automated data:
-- Total Revenue: RM${sales.totalRevenue.toFixed(2)} from ${sales.totalOrders} orders.
-- Top Product: ${topProduct?.name || "None"} (Generated RM${topProduct?.revenue.toFixed(0)})
-- Overall Stock Health: ${stockHealth} (${inventory.lowStockCount} items are low)
+Data:
+- Revenue: RM${sales.totalRevenue.toFixed(2)} (${sales.totalOrders} orders).
+- Top Product: ${topProduct?.name || "None"}
+- Stock Health: ${stockHealth} (${inventory.lowStockCount} items low)
 
-Write 2 paragraphs. Paragraph 1: Celebrate the top product. Paragraph 2: Actionable advice regarding stock health.`;
+Write 2 paragraphs. P1: Celebrate top product. P2: Stock advice.`;
 
   try {
     const res = await fetchWithTimeout("https://api.ilmu.ai/anthropic/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey.trim() },
       body: JSON.stringify({ model: "ilmu-glm-5.1", max_tokens: 500, temperature: 0.5, messages: [{ role: "user", content: prompt }] }),
-    }, 15000);
+    }, 20000); // Progress: standard 20s
     
     const data = await res.json();
     return data.content?.[0]?.text || "Failed to generate briefing.";
@@ -127,7 +128,6 @@ export async function getAnomalyExplanations(products: any[], orders: any[]): Pr
   const apiKey = process.env.ZAI_API_KEY;
   if (!apiKey || apiKey.includes("your-zai")) return [];
 
-  // Node.js calculates the anomalies (e.g., comparing week 1 vs week 2)
   const week1Start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const anomalies: { name: string, change: number }[] = [];
 
@@ -137,28 +137,24 @@ export async function getAnomalyExplanations(products: any[], orders: any[]): Pr
     
     if (w2 > 0) {
       const change = Math.round(((w1 - w2) / w2) * 100);
-      if (Math.abs(change) > 50) anomalies.push({ name: p.name, change }); // Flag if > 50% change
+      if (Math.abs(change) > 50) anomalies.push({ name: p.name, change });
     }
   });
 
   if (anomalies.length === 0) return ["No major anomalies detected today."];
 
-  // Ask Z.AI to explain the anomaly
   const anomalyText = anomalies.map(a => `${a.name} (Sales ${a.change > 0 ? 'up' : 'down'} ${Math.abs(a.change)}%)`).join(", ");
-  
-  const prompt = `A Malaysian fashion store detected sudden sales anomalies for these items: ${anomalyText}. 
-  Give exactly ${anomalies.length} very brief sentences explaining possible business reasons for these sudden changes (e.g., viral trend, out of stock, seasonal end). Reply in Malay.`;
+  const prompt = `A Malaysian fashion store detected sudden sales changes: ${anomalyText}. Explanations in Malay (concise).`;
 
   try {
     const res = await fetchWithTimeout("https://api.ilmu.ai/anthropic/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey.trim() },
       body: JSON.stringify({ model: "ilmu-glm-5.1", max_tokens: 300, temperature: 0.5, messages: [{ role: "user", content: prompt }] }),
-    }, 15000);
+    }, 20000);
     
     const data = await res.json();
     const text = data.content?.[0]?.text || "";
-    // Split the AI's response into an array of sentences
     return text.split('\n').filter((s: string) => s.trim().length > 0);
   } catch (err) {
     return ["Could not fetch AI explanations."];
@@ -167,12 +163,11 @@ export async function getAnomalyExplanations(products: any[], orders: any[]): Pr
 
 export async function fetchAnomalyInsights(): Promise<string[]> {
   const supabase = await createClient();
-  const daysWindow = 14;
-  const startDate = new Date(); startDate.setDate(startDate.getDate() - daysWindow);
+  const startDate = new Date(); startDate.setDate(startDate.getDate() - 14);
   
   const { data: orders } = await supabase.from("orders").select("product_id, quantity, created_at").gte("created_at", startDate.toISOString());
   const { data: products } = await supabase.from("products").select("id, name");
-  if (!products || !orders) return ["Not enough data to detect anomalies."];
+  if (!products || !orders) return ["Not enough data."];
 
   const week1Start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const anomalies: { name: string; change: number }[] = [];
@@ -186,47 +181,45 @@ export async function fetchAnomalyInsights(): Promise<string[]> {
     }
   });
 
-  if (anomalies.length === 0) return ["No major anomalies detected today. Sales remain stable."];
+  if (anomalies.length === 0) return ["No major anomalies detected."];
 
   const apiKey = process.env.ZAI_API_KEY;
   if (!apiKey || apiKey.includes("your-zai")) return ["AI Unavailable"];
 
-  const anomalyText = anomalies.map((a: any) => `${a.name} (Sales ${a.change > 0 ? 'up' : 'down'} ${Math.abs(a.change)}%)`).join(", ");
-  const prompt = `A retail fashion store detected sudden sales changes: ${anomalyText}. Provide exactly ${anomalies.length} brief sentences explaining possible business reasons (e.g., viral trend, out of stock, end of season). Answer in English.`;
+  const anomalyText = anomalies.map((a: any) => `${a.name} (${a.change > 0 ? '+' : ''}${a.change}%)`).join(", ");
+  const prompt = `Sales changes: ${anomalyText}. Give brief reasons in English.`;
 
   try {
     const res = await fetchWithTimeout("https://api.ilmu.ai/anthropic/v1/messages", {
-      method: "POST", headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      method: "POST", headers: { "Content-Type": "application/json", "x-api-key": apiKey.trim() },
       body: JSON.stringify({ model: "ilmu-glm-5.1", max_tokens: 300, temperature: 0.5, messages: [{ role: "user", content: prompt }] }),
-    }, 15000);
+    }, 20000);
     const data = await res.json();
-    const text = data.content?.[0]?.text || "";
-    // ✅ FIXED: Explicitly type 's' as string
-    return text.split('\n').filter((s: string) => s.trim().length > 0);
-  } catch (err) { return ["Failed to fetch AI explanations."]; }
+    return (data.content?.[0]?.text || "").split('\n').filter((s: string) => s.trim().length > 0);
+  } catch (err) { return ["Failed to fetch insights."]; }
 }
 
 export async function getAIAnalystInsight(sales: SalesAnalytics, inventory: InventorySummary, predictions: StockPrediction[]): Promise<string> {
   const apiKey = process.env.ZAI_API_KEY;
-  if (!apiKey || apiKey.includes("your-zai")) return "AI Analyst unavailable. API Key is not configured.";
+  if (!apiKey || apiKey.includes("your-zai")) return "AI Analyst unavailable.";
   
   const stateHash = `${sales.totalRevenue}-${inventory.totalStock}`;
   if (cachedAnalyst && (Date.now() - cachedAnalyst.timestamp < 30 * 60 * 1000) && cachedAnalyst.stateHash === stateHash) {
     return cachedAnalyst.text;
   }
 
-  const fstr = predictions.filter(p => p.status !== "stable").map(p => `${p.name} (${p.daysRemaining}d left)`).join(", ");
-  const prompt = `Business: RM${sales.totalRevenue.toFixed(2)} revenue, ${sales.totalOrders} orders. Risks: ${fstr || "None"}. Write 3 short inventory tips in Malay.`;
+  const fstr = predictions.filter(p => p.status !== "stable").map(p => `${p.name} (${p.daysRemaining}d)`).join(", ");
+  const prompt = `Revenue: RM${sales.totalRevenue.toFixed(2)}, Orders: ${sales.totalOrders}. Risks: ${fstr || "None"}. 3 inventory tips in Malay.`;
 
   try {
     const res = await fetchWithTimeout(
       "https://api.ilmu.ai/anthropic/v1/messages",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+        headers: { "Content-Type": "application/json", "x-api-key": apiKey.trim() },
         body: JSON.stringify({ model: "ilmu-glm-5.1", max_tokens: 400, temperature: 0.3, messages: [{ role: "user", content: prompt }] }),
       },
-      15000 
+      20000 
     );
     
     const data = await res.json();
@@ -234,16 +227,40 @@ export async function getAIAnalystInsight(sales: SalesAnalytics, inventory: Inve
     if (resultText) cachedAnalyst = { text: resultText, timestamp: Date.now(), stateHash };
     return resultText;
   } catch (err) {
-    return cachedAnalyst ? cachedAnalyst.text : "AI Analyst request failed.";
+    return cachedAnalyst ? cachedAnalyst.text : "AI Analyst failed.";
   }
 }
 
-export interface DashboardData {
-  kpis: { totalMessages: number; botHandled: number; activeChats: number; ordersToday: number; unansweredConversations: number; avgReplyTimeSeconds: number; };
-  volumeData: { time: string; messages: number; botHandled: number; ownerHandled: number }[];
-  replyTimeData: { bucket: string; count: number }[];
-  liveActivity: { id: string; customer: string; avatar: string; message: string; platform: "Shopee"; status: StatusType; time: string; intent: string; }[];
-  timeline: { id: string; label: string; detail: string; time: string; type: "intent" | "tool" | "reply" | "complete"; latency: string; }[];
+// Progress Adapt: Restore getShippingRecommendations
+export async function getShippingRecommendations(destination: string) {
+  const supabase = await createClient();
+  const { data: rates, error } = await supabase
+    .from('courier_rates')
+    .select(`base_price, buyer_base_price, handling_fee, destination, courier_partners(name)`)
+    .ilike('destination', `%${destination}%`);
+
+  if (error || !rates || rates.length === 0) return { success: false, message: "No rates found." };
+
+  const recommendations = rates.map(r => {
+    const partner = Array.isArray(r.courier_partners) ? r.courier_partners[0]?.name : (r.courier_partners as any)?.name;
+    const sellerCost = Number(r.base_price);
+    const buyerCharge = Number(r.buyer_base_price) + Number(r.handling_fee);
+    return { partner, sellerCost: sellerCost.toFixed(2), buyerCharge: buyerCharge.toFixed(2), profit: (buyerCharge - sellerCost).toFixed(2) };
+  }).sort((a, b) => Number(a.sellerCost) - Number(b.sellerCost));
+
+  const apiKey = process.env.ZAI_API_KEY;
+  let aiSummary = "";
+  if (apiKey && !apiKey.includes("your-zai")) {
+    const prompt = `Analyze courier for ${destination}: ${recommendations.map(r => `${r.partner}: Cost RM${r.sellerCost}, Profit RM${r.profit}`).join(", ")}. Short best option recommendation.`;
+    try {
+      const res = await fetch("https://api.ilmu.ai/anthropic/v1/messages", {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey.trim() },
+        body: JSON.stringify({ model: 'ilmu-glm-5.1', messages: [{ role: 'user', content: prompt }] })
+      });
+      aiSummary = (await res.json()).content[0].text;
+    } catch (e) { aiSummary = `Recommend ${recommendations[0].partner}.`; }
+  }
+  return { success: true, recommendations, aiSummary };
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
@@ -312,4 +329,12 @@ export async function getDashboardData(): Promise<DashboardData> {
       type: (m.sender === "system" ? "tool" : "reply") as "intent" | "tool" | "reply" | "complete", latency: m.sender === "system" ? "0.1s" : "1.2s" 
     }))
   };
+}
+
+export interface DashboardData {
+  kpis: { totalMessages: number; botHandled: number; activeChats: number; ordersToday: number; unansweredConversations: number; avgReplyTimeSeconds: number; };
+  volumeData: { time: string; messages: number; botHandled: number; ownerHandled: number }[];
+  replyTimeData: { bucket: string; count: number }[];
+  liveActivity: { id: string; customer: string; avatar: string; message: string; platform: "Shopee"; status: StatusType; time: string; intent: string; }[];
+  timeline: { id: string; label: string; detail: string; time: string; type: "intent" | "tool" | "reply" | "complete"; latency: string; }[];
 }
