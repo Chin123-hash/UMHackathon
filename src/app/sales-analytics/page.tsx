@@ -186,6 +186,11 @@ export default function SalesAnalyticsPage() {
   // ✅ Removed getStockPredictions SWR call
   const handleRefresh = () => { mutateSales(); mutateInventory(); toast.info("Refreshing data..."); };
   
+  // ✅ Extracted logic to satisfy TypeScript
+  const lowStockTrend = inventoryData?.lowStockCount 
+    ? { value: `${inventoryData.lowStockCount} alerts`, positive: false } 
+    : undefined;
+  
   return (
     <AppLayout breadcrumbs={[{ label: "Sales Analytics" }]}>
       <div className="space-y-6">
@@ -200,7 +205,7 @@ export default function SalesAnalyticsPage() {
           <StatCard icon={DollarSign} label="Total Revenue" value={`RM${(salesData?.totalRevenue || 0).toFixed(2)}`} iconBg="bg-green-500" />
           <StatCard icon={ShoppingCart} label="Total Orders" value={String(salesData?.totalOrders || 0)} subValue={`Avg RM${(salesData?.avgOrderValue || 0).toFixed(2)} / order`} iconBg="bg-blue-500" />
           <StatCard icon={Package} label="Total Stock" value={String(inventoryData?.totalStock || 0)} subValue={`${inventoryData?.totalProducts || 0} unique products`} iconBg="bg-purple-500" />
-          <StatCard icon={TrendingUp} label="Inventory Value" value={`RM${(inventoryData?.totalValue || 0).toFixed(2)}`} trend={inventoryData?.lowStockCount > 0 ? { value: `${inventoryData.lowStockCount} alerts`, positive: false } : undefined} iconBg="bg-orange-500" />
+          <StatCard icon={TrendingUp} label="Inventory Value" value={`RM${(inventoryData?.totalValue || 0).toFixed(2)}`} trend={lowStockTrend} iconBg="bg-orange-500" />
         </div>
 
         {/* ✅ NEW LAYOUT: AI Features Side-by-Side */}
