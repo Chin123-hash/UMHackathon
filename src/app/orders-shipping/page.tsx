@@ -1,7 +1,10 @@
+
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import AppLayout from '@/components/AppLayout';
+import useSWR from 'swr';
+import { getAllOrders, DbOrder } from '@/lib/actions/orders';
 import {
   Truck,
   Search,
@@ -13,7 +16,10 @@ import {
   MapPin,
   ExternalLink,
   ChevronDown,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Order {
   id: string;
@@ -27,105 +33,6 @@ interface Order {
   destination: string;
   eastMalaysia: boolean;
 }
-
-const orders: Order[] = [
-  {
-    id: 'SPX-MY-240420-001',
-    customer: 'Nurul_Ain92',
-    items: 'Baju Kurung Moden – Size M (×2)',
-    platform: 'Shopee',
-    status: 'Shipped',
-    trackingNo: 'MY240420001234',
-    courier: 'J&T Express',
-    lastUpdated: '20 Apr 2026, 14:32',
-    destination: 'Petaling Jaya, Selangor',
-    eastMalaysia: false,
-  },
-  {
-    id: 'SPX-MY-240420-002',
-    customer: 'farahazwan_kl',
-    items: 'Blouse Raya – Size S (×1)',
-    platform: 'Shopee',
-    status: 'To Ship',
-    trackingNo: null,
-    courier: null,
-    lastUpdated: '20 Apr 2026, 13:15',
-    destination: 'Kota Kinabalu, Sabah',
-    eastMalaysia: true,
-  },
-  {
-    id: 'SPX-MY-240420-003',
-    customer: 'syafiqah_putrajaya',
-    items: 'Dress Batik – Size L (×1)',
-    platform: 'Shopee',
-    status: 'Shipped',
-    trackingNo: 'MY240420005678',
-    courier: 'Pos Laju',
-    lastUpdated: '20 Apr 2026, 11:50',
-    destination: 'Kuching, Sarawak',
-    eastMalaysia: true,
-  },
-  {
-    id: 'SPX-MY-240420-004',
-    customer: 'AmirulHaziq88',
-    items: 'Kemeja Batik – Size XL (×1)',
-    platform: 'Shopee',
-    status: 'Pending',
-    trackingNo: null,
-    courier: null,
-    lastUpdated: '20 Apr 2026, 10:22',
-    destination: 'Johor Bahru, Johor',
-    eastMalaysia: false,
-  },
-  {
-    id: 'SPX-MY-240420-005',
-    customer: 'Liyana_Soraya',
-    items: 'Baju Kurung Moden – Size M (×1), Blouse Raya – Size M (×1)',
-    platform: 'Shopee',
-    status: 'Delivered',
-    trackingNo: 'MY240418009012',
-    courier: 'DHL eCommerce',
-    lastUpdated: '19 Apr 2026, 16:45',
-    destination: 'Ipoh, Perak',
-    eastMalaysia: false,
-  },
-  {
-    id: 'SPX-MY-240420-006',
-    customer: 'norhaslinda_ipoh',
-    items: 'Dress Batik – Size S (×2)',
-    platform: 'Shopee',
-    status: 'Shipped',
-    trackingNo: 'MY240419003456',
-    courier: 'J&T Express',
-    lastUpdated: '19 Apr 2026, 09:10',
-    destination: 'Sandakan, Sabah',
-    eastMalaysia: true,
-  },
-  {
-    id: 'SPX-MY-240420-007',
-    customer: 'zulaikha_jb',
-    items: 'Blouse Raya – Size S (×3)',
-    platform: 'Shopee',
-    status: 'To Ship',
-    trackingNo: null,
-    courier: null,
-    lastUpdated: '20 Apr 2026, 09:05',
-    destination: 'Miri, Sarawak',
-    eastMalaysia: true,
-  },
-  {
-    id: 'SPX-MY-240420-008',
-    customer: 'PuteriNadia_',
-    items: 'Baju Kurung Moden – Size L (×1)',
-    platform: 'Shopee',
-    status: 'Pending',
-    trackingNo: null,
-    courier: null,
-    lastUpdated: '20 Apr 2026, 15:01',
-    destination: 'Shah Alam, Selangor',
-    eastMalaysia: false,
-  },
-];
 
 const statusConfig: Record<Order['status'], { label: string; classes: string; icon: React.ReactNode }> = {
   Pending: {
@@ -157,7 +64,7 @@ function TrackingMessagePreview({ order }: { order: Order }) {
 
   const filled = template
     .replace(/{tracking_no}/g, order.trackingNo || 'MY240420XXXXXX')
-    .replace(/{courier}/g, order.courier || 'J&T Express')
+    .replace(/{courier}/g, order.courier || 'Shopee Express')
     .replace(/{eta}/g, order.eastMalaysia ? '5–8 hari bekerja' : '2–4 hari bekerja');
 
   const handleCopy = () => {
@@ -190,7 +97,39 @@ export default function OrdersShippingPage() {
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
-  const filtered = orders.filter((o) => {
+  const { data: dbOrders, error, isLoading, mutate } = useSWR('all-orders', getAllOrders);
+
+  const mappedOrders = useMemo(() => {
+    if (!dbOrders) return [];
+    return dbOrders.map((dbOrder: DbOrder): Order => {
+      let status: Order['status'] = 'Pending';
+      if (dbOrder.status === 'completed') status = 'Delivered';
+      else if (dbOrder.tracking_no) status = 'Shipped';
+      else if (dbOrder.status === 'pending') status = 'Pending';
+
+      return {
+        id: dbOrder.id.slice(0, 13).toUpperCase(), // Simplified ID for UI
+        customer: dbOrder.customer || 'Guest User',
+        items: `${dbOrder.product_name || 'Product'} (×${dbOrder.quantity})`,
+        platform: 'Shopee',
+        status,
+        trackingNo: dbOrder.tracking_no,
+        courier: dbOrder.tracking_no ? 'J&T Express' : null,
+        lastUpdated: new Date(dbOrder.created_at).toLocaleString('en-MY', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }),
+        destination: 'Unknown Destination', // Placeholder
+        eastMalaysia: false, // Placeholder
+      };
+    });
+  }, [dbOrders]);
+
+  const filtered = mappedOrders.filter((o) => {
     const matchSearch =
       o.id.toLowerCase().includes(search.toLowerCase()) ||
       o.customer.toLowerCase().includes(search.toLowerCase()) ||
@@ -200,11 +139,19 @@ export default function OrdersShippingPage() {
   });
 
   const counts = {
-    All: orders.length,
-    Pending: orders.filter((o) => o.status === 'Pending').length,
-    'To Ship': orders.filter((o) => o.status === 'To Ship').length,
-    Shipped: orders.filter((o) => o.status === 'Shipped').length,
-    Delivered: orders.filter((o) => o.status === 'Delivered').length,
+    All: mappedOrders.length,
+    Pending: mappedOrders.filter((o) => o.status === 'Pending').length,
+    'To Ship': mappedOrders.filter((o) => o.status === 'To Ship').length,
+    Shipped: mappedOrders.filter((o) => o.status === 'Shipped').length,
+    Delivered: mappedOrders.filter((o) => o.status === 'Delivered').length,
+  };
+
+  const handleRefresh = async () => {
+    toast.promise(mutate(), {
+      loading: 'Refreshing orders...',
+      success: 'Orders synced!',
+      error: 'Failed to sync orders',
+    });
   };
 
   return (
@@ -215,12 +162,21 @@ export default function OrdersShippingPage() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Orders & Shipping</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              NabilahFashion.my · {orders.length} orders today
+              NabilahFashion.my · {mappedOrders.length} orders total
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mono">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse inline-block" />
-            Synced 15:38
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mono">
+              <span className={`w-1.5 h-1.5 rounded-full inline-block ${isLoading ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`} />
+              {isLoading ? 'Syncing...' : 'Synced Live'}
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="p-2 hover:bg-muted rounded-full transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+            </button>
           </div>
         </div>
 
@@ -295,10 +251,19 @@ export default function OrdersShippingPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.length === 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="animate-spin text-primary-500" />
+                        <p className="text-xs text-muted-foreground">Loading orders from database...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                      No orders match your search.
+                      {error ? 'Failed to load orders. Please try again.' : 'No orders match your search.'}
                     </td>
                   </tr>
                 ) : (
@@ -381,7 +346,7 @@ export default function OrdersShippingPage() {
           </div>
           <div className="px-4 py-3 border-t border-border flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Showing <span className="font-medium text-foreground">{filtered.length}</span> of {orders.length} orders
+              Showing <span className="font-medium text-foreground">{isLoading ? '...' : filtered.length}</span> of {isLoading ? '...' : mappedOrders.length} orders
             </p>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />

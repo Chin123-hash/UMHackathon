@@ -1,52 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from "@/lib/supabase/server";
-import crypto from 'crypto';
 
 export const maxDuration = 30;
 
-function generateZhipuToken(apiKey: string) {
-  try {
-    const [id, secret] = apiKey.split('.');
-    if (!id || !secret) return apiKey;
-
-    const header = { alg: 'HS256', sign_type: 'SIGN' };
-    const payload = {
-      api_key: id,
-      exp: Date.now() + 3600 * 1000, 
-      timestamp: Date.now()
-    };
-
-    const toBase64Url = (obj: any) => 
-      Buffer.from(JSON.stringify(obj))
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-    
-    const encodedHeader = toBase64Url(header);
-    const encodedPayload = toBase64Url(payload);
-    
-    const signature = crypto.createHmac('sha256', secret)
-      .update(`${encodedHeader}.${encodedPayload}`)
-      .digest('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-      
-    return `${encodedHeader}.${encodedPayload}.${signature}`;
-  } catch (error) {
-    console.error("JWT Generation Error:", error);
-    return apiKey;
-  }
-}
+type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { message, conversationId, productId, qty = 1 } = body;
     
-    console.log("--- API DEBUG: REQUEST RECEIVED ---");
-
     if (!message) return NextResponse.json({ error: "Message required" }, { status: 400 });
 
     const supabase = await createClient();
@@ -55,82 +21,84 @@ export async function POST(req: Request) {
     if (message === "ACTION_CONFIRM_ORDER") {
       const targetId = productId || "p-001-M";
       const { error: stockError } = await supabase.rpc('decrement_stock', { row_id: targetId, qty: qty });
-
-      if (stockError) {
-        return NextResponse.json({ reply: "Maaf sis, stok untuk item ini baru sahaja habis. 🙏" });
-      }
+      
+      if (stockError) return NextResponse.json({ reply: "Maaf sis, stok baru habis! 🙏" });
 
       await supabase.from("messages").insert([{ 
         conversation_id: conversationId, 
         sender: "system", 
-        text: `🚨 NEW ORDER: Customer confirmed ${qty}x [${targetId}] via confirmation popup.` 
+        text: `🚨 ORDER CONFIRMED: ${qty}x [${targetId}].` 
       }]);
 
-      return NextResponse.json({ reply: "Terima kasih! Pesanan anda telah disahkan dan akan diproses segera. 😊" });
+      return NextResponse.json({ reply: "Alhamdulillah! Pesanan anda telah disahkan. 😊" });
     }
 
-    // --- 2. LOG CUSTOMER MESSAGE ---
+    // --- 2. LOG & FETCH HISTORY ---
+    let chatHistory: ChatMessage[] = [];
     if (conversationId) {
+      const { data: historyData } = await supabase
+        .from("messages")
+        .select("sender, text")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      if (historyData) {
+        chatHistory = historyData.reverse().map(msg => ({
+          role: msg.sender === 'customer' ? 'user' : 'assistant' as const,
+          content: msg.text
+        }));
+      }
+
       await supabase.from("messages").insert([{ 
-        conversation_id: conversationId, 
-        sender: "customer", 
-        text: message,
-        status: "unanswered" // Explicitly mark as unanswered
+        conversation_id: conversationId, sender: "customer", text: message, status: "unanswered"
       }]);
     }
     
-    // --- 3. FETCH CONTEXT (Now including Description) ---
-    // We explicitly select the description column
-    const { data: products } = await supabase
-      .from("products")
-      .select("id, name, size, stock, price, description");
+    // --- 3. FETCH CONTEXT ---
+    const { data: products } = await supabase.from("products").select("*");
+    const { data: rates } = await supabase.from("courier_rates").select(`buyer_base_price, handling_fee, destination, courier_partners(name)`);
 
-    const inventoryContext = products?.map(p => 
-      `- ID: ${p.id} | Name: ${p.name} | Size: ${p.size} | Stock: ${p.stock} | Price: RM${p.price} | Product Info: ${p.description || "Tiada info tambahan."}`
-    ).join("\n") || "No inventory found.";
+    const inventoryContext = products?.map(p => `- ${p.id}: ${p.name} (RM${p.price}) | Size: ${p.size}`).join("\n");
+    const shippingContext = rates?.map(r => {
+      const partner = Array.isArray(r.courier_partners) ? r.courier_partners[0]?.name : (r.courier_partners as any)?.name;
+      const totalShipping = Number(r.buyer_base_price) + Number(r.handling_fee);
+      return `- State: ${r.destination} | Total Shipping: RM${totalShipping.toFixed(2)} (${partner})`;
+    }).join("\n");
 
-    const systemPrompt = `You are SellerMate AI, a helpful e-commerce assistant in Malaysia.
-    Use friendly slang like 'sis', 'boss', 'ye'. 
+    // --- 4. SYSTEM PROMPT ---
+    const systemPrompt = `You are SellerMate AI.
+    
+    CRITICAL RULES:
+    1. REQUEST FULL ADDRESS: You must ask for the COMPLETE shipping address.
+    2. EXTRACT STATE: Identify the STATE from the provided full address. Use this state to find the rate in context.
+    3. POPUP LOGIC: You MUST append the [SHOW_CONFIRMATION] tag every time intent is shown and data is ready.
+    4. NO BYPASSING: Never skip shipping fees. If the address is incomplete, ask: "Boleh bagi alamat penuh sis?"
 
-    CONTEXT:
-    The customer is currently looking at product group: ${productId}.
-    Inventory List:
-    ${inventoryContext}
+    CALCULATION: Total = (Product Price * Qty) + Shipping Fee.
+    [SHOW_CONFIRMATION: {"id": "prod_id", "qty": num, "name": "name", "total": price}]
 
-    GUIDELINES:
-    1. Use the 'Product Info' section from the inventory list to answer questions about material, fabric, design, or benefits (e.g., if user asks "kain apa ni?").
-    2. If a customer expresses intent to buy, you MUST respond nicely and append this EXACT tag at the very end: 
-       [SHOW_CONFIRMATION: {"id": "target_variant_id", "qty": number, "name": "product_name"}]
-    3. Use suffix "-FS" for Free Size and "-S", "-M", etc., for others.`;
+    DATA:
+    Inventory: ${inventoryContext}
+    Shipping: ${shippingContext}`;
 
     let botReply = "";
+    const apiKey = process.env.ZAI_API_KEY;
 
-    // --- 4. AI PROVIDERS ---
-
-    // Option A: Z.ai / ILMU-GLM-5.1
-    
-    // Option A: Z.ai / ILMU-GLM-5.1
-    if (process.env.ZAI_API_KEY && !process.env.ZAI_API_KEY.includes("your-zai")) {
-      const traceId = Math.random().toString(36).substring(7);
-      console.group(`[TRACE-${traceId}] Z.ai Request`);
-      
+    // --- 5. AI EXECUTION WITH DETAILED LOGGING ---
+    if (apiKey && !apiKey.includes("your-zai")) {
       const startTime = Date.now();
-      const apiKey = process.env.ZAI_API_KEY.trim();
-
       try {
         const res = await fetch('https://api.ilmu.ai/anthropic/v1/messages', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json', 
-            'x-api-key': apiKey 
-          },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey.trim() },
           body: JSON.stringify({
             model: 'ilmu-glm-5.1',
             system: systemPrompt,
             max_tokens: 1024,
-            messages: [{ role: 'user', content: message }]
+            messages: [...chatHistory, { role: 'user', content: message }]
           }),
-          signal: AbortSignal.timeout(50000) // Increased to 10s for stability
+          signal: AbortSignal.timeout(50000)
         });
 
         const duration = Date.now() - startTime;
@@ -138,71 +106,46 @@ export async function POST(req: Request) {
         if (res.ok) {
           const data = await res.json();
           botReply = data.content[0].text;
-          console.log(`✅ SUCCESS: Z.ai replied in ${duration}ms`);
+          console.log(`✅ Z.ai Success: ${duration}ms`);
         } else {
-          // --- DETAILED FAILURE LOGGING ---
-          const errorText = await res.text(); // Capture the actual error message or HTML
+          // --- ADDED ERROR LOGGING ---
+          const errorText = await res.text();
           console.error(`❌ Z.ai FAILED (${res.status} ${res.statusText})`);
           console.error(`   Ray-ID: ${res.headers.get('cf-ray') || 'N/A'}`);
           console.error(`   Duration: ${duration}ms`);
           
           try {
-            // Attempt to parse as JSON if possible, otherwise show raw text
             const errorJson = JSON.parse(errorText);
             console.error("   Error Detail:", JSON.stringify(errorJson, null, 2));
           } catch {
-            // If it's a 502/504 error, this will likely be a snippet of HTML
             console.error("   Error Body Snippet:", errorText.substring(0, 500));
           }
 
-          // Helpful hints based on status codes
-          if (res.status === 502) console.warn("   💡 HINT: Bad Gateway. The AI server is likely down or restarting.");
-          if (res.status === 401) console.warn("   💡 HINT: Unauthorized. Double check your ANTHROPIC_AUTH_TOKEN in .env.");
-          if (res.status === 404) console.warn("   💡 HINT: Not Found. Check the endpoint URL or Model Key name.");
+          if (res.status === 502) console.warn("   💡 HINT: Bad Gateway. AI server is likely down.");
+          if (res.status === 401) console.warn("   💡 HINT: Unauthorized. Check ZAI_API_KEY.");
+          if (res.status === 404) console.warn("   💡 HINT: Not Found. Check endpoint/model name.");
         }
       } catch (err: any) {
         if (err.name === 'AbortError') {
-          console.error("❌ Z.ai TIMEOUT: The server took longer than 10s to respond.");
+          console.error("❌ Z.ai TIMEOUT");
         } else {
           console.error("❌ Z.ai CONNECTION ERROR:", err.message);
         }
       }
-      console.groupEnd();
     }
 
-    // Option B: Groq Fallback
-    // if (!botReply && process.env.GROQ_API_KEY) {
-    //   console.log("Routing to Groq...");
-    //   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    //     method: 'POST',
-    //     headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({
-    //       model: 'llama-3.3-70b-versatile',
-    //       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
-    //     })
-    //   });
-    //   if (res.ok) {
-    //     const data = await res.json();
-    //     botReply = data.choices[0].message.content;
-    //   }
-    // }
+    botReply = botReply || "Maaf sis, sistem busy sikit. Cuba lagi ya? 🙏";
 
-    botReply = botReply || "Maaf, sistem sedang sibuk sebentar. Sila cuba lagi ya? 🙏";
-
-    // --- 5. LOG BOT REPLY ---
     if (conversationId) {
       await supabase.from("messages").insert([{ 
-        conversation_id: conversationId, 
-        sender: "bot", 
-        text: botReply,
-        status: "bot-responded" // Explicitly mark as bot-responded
+        conversation_id: conversationId, sender: "bot", text: botReply, status: "bot-responded"
       }]);
     }
 
     return NextResponse.json({ reply: botReply });
 
-  } catch (error: any) {
-    console.error("Chat API Critical Error:", error);
-    return NextResponse.json({ reply: "Sistem Error. Sila cuba lagi sebentar." }, { status: 500 });
+  } catch (error) {
+    console.error("CRITICAL ROUTE ERROR:", error);
+    return NextResponse.json({ reply: "Sistem Error." }, { status: 500 });
   }
 }

@@ -147,7 +147,7 @@ export async function getAnomalyExplanations(products: any[], orders: any[]): Pr
   const anomalyText = anomalies.map(a => `${a.name} (Sales ${a.change > 0 ? 'up' : 'down'} ${Math.abs(a.change)}%)`).join(", ");
   
   const prompt = `A Malaysian fashion store detected sudden sales anomalies for these items: ${anomalyText}. 
-Give exactly ${anomalies.length} very brief sentences explaining possible business reasons for these sudden changes (e.g., viral trend, out of stock, seasonal end). Reply in Malay.`;
+  Give exactly ${anomalies.length} very brief sentences explaining possible business reasons for these sudden changes (e.g., viral trend, out of stock, seasonal end). Reply in Malay.`;
 
   try {
     const res = await fetchWithTimeout("https://api.ilmu.ai/anthropic/v1/messages", {
