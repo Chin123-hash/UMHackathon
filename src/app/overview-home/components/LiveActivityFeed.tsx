@@ -3,16 +3,16 @@
 import React from 'react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import type { StatusType } from '@/components/ui/StatusBadge';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Zap } from 'lucide-react';
 
 export interface ActivityItem {
   id: string;
   customer: string;
   avatar: string;
   message: string;
-  platform: 'Shopee';
+  platform: 'Shopee' | 'Instagram' | 'TikTok' | 'WhatsApp' | 'Telegram';
   status: StatusType;
-  time: string;
+  time: string; // Now dynamically "1.2s" or "14:30"
   intent: string;
 }
 
@@ -35,44 +35,60 @@ export default function LiveActivityFeed({ data }: { data: ActivityItem[] }) {
         {data.length === 0 ? (
           <div className="text-center text-sm text-gray-500 py-10">No recent messages today.</div>
         ) : (
-          data.map((item) => (
-            <div
-              key={item.id}
-              className="p-3 hover:bg-gray-50 rounded-xl transition-colors group cursor-pointer border border-transparent hover:border-border"
-            >
-              <div className="flex items-start gap-3">
-                {/* Avatar */}
-                <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold shrink-0">
-                  {item.avatar}
-                </div>
+          data.map((item) => {
+            // ✅ Determine if it's a speed metric or a timestamp
+            const isReplySpeed = item.time.endsWith('s');
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
-                        {item.customer}
-                      </span>
-                      <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
-                        {item.platform}
-                      </span>
-                    </div>
-                    <span className="text-xs text-muted-foreground mono">{item.time}</span>
+            return (
+              <div
+                key={item.id}
+                className="p-3 hover:bg-gray-50 rounded-xl transition-colors group cursor-pointer border border-transparent hover:border-border"
+              >
+                <div className="flex items-start gap-3">
+                  {/* Avatar */}
+                  <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold shrink-0">
+                    {item.avatar}
                   </div>
 
-                  <p className="text-sm text-gray-700 line-clamp-2 mb-2 leading-relaxed">
-                    {item.message}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
+                          {item.customer}
+                        </span>
+                        <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
+                          {item.platform}
+                        </span>
+                      </div>
 
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={item.status} />
-                    <span className="text-[10px] text-muted-foreground border border-border px-1.5 py-0.5 rounded bg-white">
-                      intent: {item.intent}
-                    </span>
+                      {/* ✅ Dynamic Time Display */}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mono shrink-0">
+                        {isReplySpeed ? (
+                          <>
+                            <Zap size={10} className="text-green-500" />
+                            <span className="text-green-600 font-semibold">{item.time}</span>
+                          </>
+                        ) : (
+                          <span>{item.time}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-gray-700 line-clamp-2 mb-2 leading-relaxed">
+                      {item.message}
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={item.status} />
+                      <span className="text-[10px] text-muted-foreground border border-border px-1.5 py-0.5 rounded bg-white">
+                        intent: {item.intent}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

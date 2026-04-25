@@ -14,7 +14,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,  } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // ── Mock data ──────────────────────────────────────────────────────────────────
 
@@ -151,8 +151,12 @@ const recentBuyIntentMessages = [
 ];
 
 const avatarColors = [
-  'bg-primary-600', 'bg-purple-500', 'bg-teal-500',
-  'bg-orange-500', 'bg-pink-500', 'bg-indigo-500',
+  'bg-primary-600',
+  'bg-purple-500',
+  'bg-teal-500',
+  'bg-orange-500',
+  'bg-pink-500',
+  'bg-indigo-500',
 ];
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -181,14 +185,18 @@ function StatCard({
           <span className={iconColor}>{icon}</span>
         </div>
         {trend && (
-          <div className={`flex items-center gap-0.5 text-xs font-medium ${trend.up ? 'text-green-600' : 'text-red-500'}`}>
+          <div
+            className={`flex items-center gap-0.5 text-xs font-medium ${trend.up ? 'text-green-600' : 'text-red-500'}`}
+          >
             {trend.up ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             {trend.value}
           </div>
         )}
       </div>
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1 mono">{label}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1 mono">
+          {label}
+        </p>
         <p className="text-3xl font-bold tabular-nums text-foreground">{value}</p>
         <p className="text-xs text-muted-foreground mt-1">{sub}</p>
       </div>
@@ -202,7 +210,9 @@ export default function LiveChatAnalysisPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const totalMessages = intentBreakdown.reduce((s, i) => s + i.count, 0);
-  const buyIntentMessages = intentBreakdown.filter((i) => i.buyIntent).reduce((s, i) => s + i.count, 0);
+  const buyIntentMessages = intentBreakdown
+    .filter((i) => i.buyIntent)
+    .reduce((s, i) => s + i.count, 0);
   const conversionRate = Math.round((buyIntentMessages / totalMessages) * 100);
 
   return (
@@ -278,14 +288,19 @@ export default function LiveChatAnalysisPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Hourly Chat Volume</h2>
-                <p className="text-xs text-muted-foreground">Total messages vs buy-intent messages</p>
+                <p className="text-xs text-muted-foreground">
+                  Total messages vs buy-intent messages
+                </p>
               </div>
               <BarChart2 size={16} className="text-muted-foreground" />
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={hourlyVolume} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="hour" tick={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} />
+                <XAxis
+                  dataKey="hour"
+                  tick={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
+                />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
@@ -327,7 +342,9 @@ export default function LiveChatAnalysisPage() {
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground mono">{item.count} ({pct}%)</span>
+                      <span className="text-xs text-muted-foreground mono">
+                        {item.count} ({pct}%)
+                      </span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
@@ -356,25 +373,38 @@ export default function LiveChatAnalysisPage() {
             <ul className="divide-y divide-border">
               {topResponders.map((r) => (
                 <li key={r.rank} className="px-5 py-3.5 flex items-center gap-3">
-                  <span className={`text-xs font-bold mono w-5 text-center ${r.rank === 1 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                  <span
+                    className={`text-xs font-bold mono w-5 text-center ${r.rank === 1 ? 'text-amber-500' : 'text-muted-foreground'}`}
+                  >
                     #{r.rank}
                   </span>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${r.color}`}>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${r.color}`}
+                  >
                     {r.avatar}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-medium text-foreground truncate">{r.name}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded mono font-medium ${
-                        r.type === 'bot' ?'bg-primary-50 text-primary-600'
-                          : r.type === 'owner' ?'bg-purple-50 text-purple-600' :'bg-muted text-muted-foreground'
-                      }`}>
+                      <span
+                        className={`text-xs px-1.5 py-0.5 rounded mono font-medium ${
+                          r.type === 'bot'
+                            ? 'bg-primary-50 text-primary-600'
+                            : r.type === 'owner'
+                              ? 'bg-purple-50 text-purple-600'
+                              : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
                         {r.type}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-xs text-muted-foreground">Avg: {r.avgResponseTime}</span>
-                      <span className="text-xs text-green-600 font-medium">{r.resolutionRate} resolved</span>
+                      <span className="text-xs text-muted-foreground">
+                        Avg: {r.avgResponseTime}
+                      </span>
+                      <span className="text-xs text-green-600 font-medium">
+                        {r.resolutionRate} resolved
+                      </span>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -393,7 +423,9 @@ export default function LiveChatAnalysisPage() {
                 <Users size={16} className="text-green-600" />
                 <div>
                   <h2 className="text-sm font-semibold text-foreground">Buy-Intent Messages</h2>
-                  <p className="text-xs text-muted-foreground">Customers showing purchase signals</p>
+                  <p className="text-xs text-muted-foreground">
+                    Customers showing purchase signals
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -403,13 +435,20 @@ export default function LiveChatAnalysisPage() {
             </div>
             <ul className="divide-y divide-border">
               {recentBuyIntentMessages.map((msg, idx) => (
-                <li key={msg.id} className="px-5 py-3.5 flex gap-3 hover:bg-muted/30 transition-colors">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${avatarColors[idx % avatarColors.length]}`}>
+                <li
+                  key={msg.id}
+                  className="px-5 py-3.5 flex gap-3 hover:bg-muted/30 transition-colors"
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${avatarColors[idx % avatarColors.length]}`}
+                  >
                     {msg.avatar}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <span className="text-xs font-semibold text-foreground mono">{msg.customer}</span>
+                      <span className="text-xs font-semibold text-foreground mono">
+                        {msg.customer}
+                      </span>
                       <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded mono font-medium">
                         {msg.intent}
                       </span>

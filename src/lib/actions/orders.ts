@@ -1,4 +1,3 @@
-
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -47,7 +46,7 @@ export async function createOrder(orderData: Partial<DbOrder>) {
         customer: orderData.customer,
         product_name: orderData.product_name,
         destination: orderData.destination,
-      }
+      },
     ])
     .select();
 
@@ -64,10 +63,10 @@ export async function updateOrderCourier(orderId: string, courierName: string, t
 
   const { data, error } = await supabase
     .from('orders')
-    .update({ 
-      courier_name: courierName, 
+    .update({
+      courier_name: courierName,
       tracking_no: trackingNo,
-      status: 'shipped'
+      status: 'shipped',
     })
     .eq('id', orderId)
     .select();

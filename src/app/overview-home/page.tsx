@@ -11,19 +11,19 @@ export const dynamic = 'force-dynamic';
 
 export default async function OverviewHomePage() {
   const dashboardData = await getDashboardData();
-  
+
   const todayStr = new Date().toLocaleDateString('en-MY', {
     weekday: 'short',
     day: '2-digit',
     month: 'short',
-    year: 'numeric'
+    year: 'numeric',
   });
-  
+
   const timeStr = new Date().toLocaleTimeString('en-MY', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false
+    hour12: false,
   });
 
   return (

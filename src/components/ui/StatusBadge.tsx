@@ -1,7 +1,18 @@
 import React from 'react';
 
 export type StatusType =
-  | 'bot-responded' |'owner-replied' |'unanswered' |'shipped' |'pending' |'to-ship' |'delivered' |'low-stock' |'out-of-stock' |'in-stock' |'active' |'inactive';
+  | 'bot-responded'
+  | 'owner-replied'
+  | 'unanswered'
+  | 'shipped'
+  | 'pending'
+  | 'to-ship'
+  | 'delivered'
+  | 'low-stock'
+  | 'out-of-stock'
+  | 'in-stock'
+  | 'active'
+  | 'inactive';
 
 const statusConfig: Record<StatusType, { label: string; className: string }> = {
   'bot-responded': { label: 'Bot Responded', className: 'badge-bot' },
@@ -26,9 +37,5 @@ interface StatusBadgeProps {
 export default function StatusBadge({ status, className = '' }: StatusBadgeProps) {
   const config = statusConfig[status];
   if (!config) return null;
-  return (
-    <span className={`${config.className} ${className}`}>
-      {config.label}
-    </span>
-  );
+  return <span className={`${config.className} ${className}`}>{config.label}</span>;
 }

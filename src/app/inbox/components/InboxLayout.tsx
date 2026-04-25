@@ -51,36 +51,41 @@ export default function InboxLayout() {
       }
     });
 
-    const formattedData: Conversation[] = Array.from(uniqueConversations.values()).map((latestMsg) => {
-      const shortId = latestMsg.conversation_id.substring(0, 4).toUpperCase();
-      
-      // Determine Status with DB Priority
-      let currentStatus: StatusType = (latestMsg.status as StatusType) || 'unanswered';
-      
-      // Safety Fallback for older rows
-      if (!latestMsg.status) {
-        if (latestMsg.sender === 'bot') currentStatus = 'bot-responded';
-        else if (latestMsg.sender === 'owner') currentStatus = 'owner-replied';
-        else currentStatus = 'unanswered';
-      }
+    const formattedData: Conversation[] = Array.from(uniqueConversations.values()).map(
+      (latestMsg) => {
+        const shortId = latestMsg.conversation_id.substring(0, 4).toUpperCase();
 
-      return {
-        id: latestMsg.conversation_id,
-        customer: `Shopper-${shortId}`,
-        avatar: shortId.charAt(0) || 'S',
-        platform: 'Shopee',
-        status: currentStatus, 
-        lastMessage: latestMsg.text,
-        time: new Date(latestMsg.created_at).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' }),
-        unread: currentStatus === 'unanswered' ? 1 : 0,
-        intent: 'general_inquiry',
-      };
-    });
+        // Determine Status with DB Priority
+        let currentStatus: StatusType = (latestMsg.status as StatusType) || 'unanswered';
+
+        // Safety Fallback for older rows
+        if (!latestMsg.status) {
+          if (latestMsg.sender === 'bot') currentStatus = 'bot-responded';
+          else if (latestMsg.sender === 'owner') currentStatus = 'owner-replied';
+          else currentStatus = 'unanswered';
+        }
+
+        return {
+          id: latestMsg.conversation_id,
+          customer: `Shopper-${shortId}`,
+          avatar: shortId.charAt(0) || 'S',
+          platform: 'Shopee',
+          status: currentStatus,
+          lastMessage: latestMsg.text,
+          time: new Date(latestMsg.created_at).toLocaleTimeString('en-MY', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          unread: currentStatus === 'unanswered' ? 1 : 0,
+          intent: 'general_inquiry',
+        };
+      }
+    );
 
     setConversations(formattedData);
-    
+
     // Auto-select first if none selected
-    setSelectedId(prev => (prev || (formattedData.length > 0 ? formattedData[0].id : null)));
+    setSelectedId((prev) => prev || (formattedData.length > 0 ? formattedData[0].id : null));
     setIsLoading(false);
   }, [supabase]);
 
@@ -100,7 +105,7 @@ export default function InboxLayout() {
           table: 'messages',
         },
         () => {
-          console.log("DB Change detected! Refreshing inbox...");
+          console.log('DB Change detected! Refreshing inbox...');
           fetchLiveConversations(); // Trigger auto-refresh
         }
       )
@@ -125,7 +130,8 @@ export default function InboxLayout() {
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            {conversations.length} conversations · {conversations.filter((c) => c.status === 'unanswered').length} awaiting reply
+            {conversations.length} conversations ·{' '}
+            {conversations.filter((c) => c.status === 'unanswered').length} awaiting reply
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -133,7 +139,9 @@ export default function InboxLayout() {
             onClick={() => setUseAI((v) => !v)}
             className={[
               'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 active:scale-95',
-              useAI ? 'bg-primary-600 text-white shadow-md' : 'bg-muted text-muted-foreground border border-border',
+              useAI
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'bg-muted text-muted-foreground border border-border',
             ].join(' ')}
           >
             {useAI ? <Bot size={15} /> : <MessageSquare size={15} />}
@@ -143,7 +151,10 @@ export default function InboxLayout() {
       </div>
 
       {/* Split panel */}
-      <div className="flex gap-0 bg-white rounded-card border border-border shadow-card overflow-hidden" style={{ height: 'calc(100vh - 220px)', minHeight: '520px' }}>
+      <div
+        className="flex gap-0 bg-white rounded-card border border-border shadow-card overflow-hidden"
+        style={{ height: 'calc(100vh - 220px)', minHeight: '520px' }}
+      >
         {isLoading ? (
           <div className="flex flex-1 items-center justify-center text-muted-foreground gap-2">
             <Loader2 className="animate-spin" size={24} />
@@ -159,15 +170,9 @@ export default function InboxLayout() {
             />
             {selectedConv ? (
               useAI ? (
-                <AIConversationThread
-                  conversation={selectedConv}
-                  viralSpike={viralSpike}
-                />
+                <AIConversationThread conversation={selectedConv} viralSpike={viralSpike} />
               ) : (
-                <ConversationThread
-                  conversation={selectedConv}
-                  viralSpike={viralSpike}
-                />
+                <ConversationThread conversation={selectedConv} viralSpike={viralSpike} />
               )
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">

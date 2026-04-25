@@ -43,7 +43,7 @@ export default function MessageVolumeChart({ data }: { data: VolumeData[] }) {
   const currentHour = new Date().getHours().toString().padStart(2, '0') + ':00';
 
   // ✅ FIX: Calculate "Total Handled" dynamically so it always equals Bot + Owner
-  const chartData = data.map(d => ({
+  const chartData = data.map((d) => ({
     ...d,
     totalHandled: (d.botHandled || 0) + (d.ownerHandled || 0),
   }));
@@ -100,9 +100,12 @@ export default function MessageVolumeChart({ data }: { data: VolumeData[] }) {
               tickLine={false}
               tick={{ fontSize: 11, fill: 'hsl(215, 16%, 47%)' }}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(210, 20%, 90%)', strokeWidth: 1, strokeDasharray: '4 4' }} />
-            
-            {chartData.some(d => d.time === currentHour) && (
+            <Tooltip
+              content={<CustomTooltip />}
+              cursor={{ stroke: 'hsl(210, 20%, 90%)', strokeWidth: 1, strokeDasharray: '4 4' }}
+            />
+
+            {chartData.some((d) => d.time === currentHour) && (
               <ReferenceLine x={currentHour} stroke="hsl(215, 16%, 47%)" strokeDasharray="3 3" />
             )}
 

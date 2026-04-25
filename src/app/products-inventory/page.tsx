@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
@@ -16,7 +16,9 @@ export default function ProductsInventoryPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Products & Inventory</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">SellerMate Demo · Live Supabase Data</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              SellerMate Demo · Live Supabase Data
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <button

@@ -49,9 +49,7 @@ function KpiCard({
         colSpan,
       ].join(' ')}
     >
-      {alert && (
-        <div className="absolute top-0 right-0 w-1 h-full bg-accent rounded-r-card" />
-      )}
+      {alert && <div className="absolute top-0 right-0 w-1 h-full bg-accent rounded-r-card" />}
       <div className="flex items-start justify-between">
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconBgClass}`}>
           <span className={colorClass}>{icon}</span>
@@ -102,9 +100,8 @@ export interface DashboardKpis {
 
 export default function KpiBentoGrid({ data }: { data: DashboardKpis }) {
   // Calculate the bot resolution rate based on today's live message data
-  const resolutionRate = data.totalMessages > 0 
-    ? ((data.botHandled / data.totalMessages) * 100).toFixed(1) 
-    : "0";
+  const resolutionRate =
+    data.totalMessages > 0 ? ((data.botHandled / data.totalMessages) * 100).toFixed(1) : '0';
   const avgReplyTimeLabel = `${data.avgReplyTimeSeconds.toFixed(1)}s`;
 
   return (
@@ -129,7 +126,10 @@ export default function KpiBentoGrid({ data }: { data: DashboardKpis }) {
         title="Avg Reply Time"
         value={avgReplyTimeLabel}
         sub="Bot response latency — target <5s"
-        trend={{ value: data.avgReplyTimeSeconds <= 5 ? 'Within target' : 'Above target', positive: data.avgReplyTimeSeconds <= 5 }}
+        trend={{
+          value: data.avgReplyTimeSeconds <= 5 ? 'Within target' : 'Above target',
+          positive: data.avgReplyTimeSeconds <= 5,
+        }}
         icon={<Clock size={18} />}
         colorClass="text-green-600"
         bgClass="bg-white"

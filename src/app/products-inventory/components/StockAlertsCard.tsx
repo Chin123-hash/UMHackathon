@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -14,7 +13,7 @@ export default function StockAlertsCard() {
   const { data: products, error, isLoading, mutate } = useSWR('stock-alerts', getProducts);
 
   // ✅ REALISTIC: Filter products where stock is below the threshold
-  const alerts = products?.filter(p => (p.stock || 0) < LOW_STOCK_THRESHOLD) || [];
+  const alerts = products?.filter((p) => (p.stock || 0) < LOW_STOCK_THRESHOLD) || [];
 
   if (isLoading) {
     return (
@@ -46,7 +45,10 @@ export default function StockAlertsCard() {
             <p className="text-xs text-green-600">All SKUs are above the reorder threshold.</p>
           </div>
         </div>
-        <button onClick={() => mutate()} className="text-green-600 hover:rotate-180 transition-transform">
+        <button
+          onClick={() => mutate()}
+          className="text-green-600 hover:rotate-180 transition-transform"
+        >
           <RefreshCw size={14} />
         </button>
       </div>
@@ -62,7 +64,10 @@ export default function StockAlertsCard() {
             Stock Critical — {alerts.length} SKU{alerts.length !== 1 ? 's' : ''}
           </h2>
         </div>
-        <button onClick={() => mutate()} className="text-amber-600 hover:text-amber-800 transition-colors">
+        <button
+          onClick={() => mutate()}
+          className="text-amber-600 hover:text-amber-800 transition-colors"
+        >
           <RefreshCw size={14} />
         </button>
       </div>
@@ -72,8 +77,13 @@ export default function StockAlertsCard() {
         {alerts.map((item: Product) => {
           const isOutOfStock = (item.stock || 0) === 0;
           return (
-            <div key={item.id} className="flex items-center gap-4 px-5 py-4 hover:bg-amber-50/30 transition-colors">
-              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isOutOfStock ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
+            <div
+              key={item.id}
+              className="flex items-center gap-4 px-5 py-4 hover:bg-amber-50/30 transition-colors"
+            >
+              <div
+                className={`w-2.5 h-2.5 rounded-full shrink-0 ${isOutOfStock ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`}
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-900 truncate">{item.name}</p>
                 <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
@@ -81,12 +91,16 @@ export default function StockAlertsCard() {
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-sm font-black tabular-nums ${isOutOfStock ? 'text-red-600' : 'text-amber-700'}`}>
+                <p
+                  className={`text-sm font-black tabular-nums ${isOutOfStock ? 'text-red-600' : 'text-amber-700'}`}
+                >
                   {item.stock} unit{item.stock !== 1 ? 's' : ''}
                 </p>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                  isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                }`}>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                    isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                  }`}
+                >
                   {isOutOfStock ? 'Out' : 'Low'}
                 </span>
               </div>
@@ -94,7 +108,7 @@ export default function StockAlertsCard() {
           );
         })}
       </div>
-      
+
       <div className="mt-auto p-3 bg-gray-50 border-t border-border">
         <p className="text-[10px] text-center text-muted-foreground uppercase font-bold tracking-tighter">
           System automatically pauses AI queries for SKUs with 0 stock.

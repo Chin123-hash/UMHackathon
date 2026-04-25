@@ -16,45 +16,112 @@ interface Message {
 
 const threadData: Record<string, Message[]> = {
   'conv-001': [
-    { id: 'msg-001-1', sender: 'customer', text: 'stk size M ada tak? nak beli 2 helai', time: '15:23:41' },
+    {
+      id: 'msg-001-1',
+      sender: 'customer',
+      text: 'stk size M ada tak? nak beli 2 helai',
+      time: '15:23:41',
+    },
     {
       id: 'msg-001-2',
       sender: 'bot',
       text: '',
       time: '15:23:42',
-      toolCall: { name: 'Inventory API', status: 'done', result: 'stock: 3, reserved: 1 → available: 2' },
+      toolCall: {
+        name: 'Inventory API',
+        status: 'done',
+        result: 'stock: 3, reserved: 1 → available: 2',
+      },
     },
-    { id: 'msg-001-3', sender: 'bot', text: 'Ada stok M, tinggal 2 je! 😊 Nak proceed order? Boleh add to cart terus ye~', time: '15:23:44' },
-    { id: 'msg-001-4', sender: 'customer', text: 'ok la, nak beli 2. boleh COD?', time: '15:24:10' },
-    { id: 'msg-001-5', sender: 'bot', text: 'Maaf, kami tak support COD buat masa ni. Payment via Shopee je ye 🙏 Tapi selamat & mudah!', time: '15:24:12' },
+    {
+      id: 'msg-001-3',
+      sender: 'bot',
+      text: 'Ada stok M, tinggal 2 je! 😊 Nak proceed order? Boleh add to cart terus ye~',
+      time: '15:23:44',
+    },
+    {
+      id: 'msg-001-4',
+      sender: 'customer',
+      text: 'ok la, nak beli 2. boleh COD?',
+      time: '15:24:10',
+    },
+    {
+      id: 'msg-001-5',
+      sender: 'bot',
+      text: 'Maaf, kami tak support COD buat masa ni. Payment via Shopee je ye 🙏 Tapi selamat & mudah!',
+      time: '15:24:12',
+    },
   ],
   'conv-002': [
-    { id: 'msg-002-1', sender: 'customer', text: 'pos ke sabah berapa rm? boleh combine order?', time: '15:21:55' },
+    {
+      id: 'msg-002-1',
+      sender: 'customer',
+      text: 'pos ke sabah berapa rm? boleh combine order?',
+      time: '15:21:55',
+    },
     {
       id: 'msg-002-2',
       sender: 'bot',
       text: '',
       time: '15:21:56',
-      toolCall: { name: 'Shipping API', status: 'done', result: 'KL→Sabah: RM9.90, est 5–7 days (J&T)' },
+      toolCall: {
+        name: 'Shipping API',
+        status: 'done',
+        result: 'KL→Sabah: RM9.90, est 5–7 days (J&T)',
+      },
     },
-    { id: 'msg-002-3', sender: 'bot', text: 'Pos ke Sabah RM9.90 via J&T, est 5–7 hari kerja 📦 Combine order boleh, shipping kira sekali je!', time: '15:21:58' },
+    {
+      id: 'msg-002-3',
+      sender: 'bot',
+      text: 'Pos ke Sabah RM9.90 via J&T, est 5–7 hari kerja 📦 Combine order boleh, shipping kira sekali je!',
+      time: '15:21:58',
+    },
     { id: 'msg-002-4', sender: 'customer', text: 'kalau 3 items still rm9.90?', time: '15:22:30' },
   ],
   'conv-005': [
-    { id: 'msg-005-1', sender: 'customer', text: 'boleh refund tak kalau size tak muat?', time: '15:14:20' },
-    { id: 'msg-005-2', sender: 'bot', text: 'Soalan tentang refund/return perlu owner sahkan. Saya escalate ke owner sekarang ya 🙏', time: '15:14:22' },
-    { id: 'msg-005-3', sender: 'owner', text: 'Hi! Boleh je refund dalam 7 hari, item dalam kondisi asal. DM saya gambar dulu ye 😊', time: '15:15:01' },
+    {
+      id: 'msg-005-1',
+      sender: 'customer',
+      text: 'boleh refund tak kalau size tak muat?',
+      time: '15:14:20',
+    },
+    {
+      id: 'msg-005-2',
+      sender: 'bot',
+      text: 'Soalan tentang refund/return perlu owner sahkan. Saya escalate ke owner sekarang ya 🙏',
+      time: '15:14:22',
+    },
+    {
+      id: 'msg-005-3',
+      sender: 'owner',
+      text: 'Hi! Boleh je refund dalam 7 hari, item dalam kondisi asal. DM saya gambar dulu ye 😊',
+      time: '15:15:01',
+    },
   ],
   'conv-007': [
-    { id: 'msg-007-1', sender: 'customer', text: 'bila restock size S? dah 3 kali check sold out 😭', time: '15:08:50' },
+    {
+      id: 'msg-007-1',
+      sender: 'customer',
+      text: 'bila restock size S? dah 3 kali check sold out 😭',
+      time: '15:08:50',
+    },
     {
       id: 'msg-007-2',
       sender: 'bot',
       text: '',
       time: '15:08:51',
-      toolCall: { name: 'Inventory API', status: 'done', result: 'BKM-001 S: stock=0, restock_eta=unknown' },
+      toolCall: {
+        name: 'Inventory API',
+        status: 'done',
+        result: 'BKM-001 S: stock=0, restock_eta=unknown',
+      },
     },
-    { id: 'msg-007-3', sender: 'bot', text: 'Maaf, size S habis stok buat masa ni 😔 Saya dah alert owner untuk restock. Nak saya notif bila ada stok?', time: '15:08:53' },
+    {
+      id: 'msg-007-3',
+      sender: 'bot',
+      text: 'Maaf, size S habis stok buat masa ni 😔 Saya dah alert owner untuk restock. Nak saya notif bila ada stok?',
+      time: '15:08:53',
+    },
     { id: 'msg-007-4', sender: 'customer', text: 'boleh! please notif tau', time: '15:09:10' },
   ],
 };
@@ -73,10 +140,7 @@ interface ConversationThreadProps {
   viralSpike: boolean;
 }
 
-export default function ConversationThread({
-  conversation,
-  viralSpike,
-}: ConversationThreadProps) {
+export default function ConversationThread({ conversation, viralSpike }: ConversationThreadProps) {
   const messages = threadData[conversation.id] || defaultThread(conversation);
   const [displayMessages, setDisplayMessages] = useState<Message[]>(messages);
   const [isTyping, setIsTyping] = useState(false);
@@ -152,7 +216,9 @@ export default function ConversationThread({
                 Shopee
               </span>
               <StatusBadge status={conversation.status} />
-              <span className="text-xs text-muted-foreground mono">{conversation.intent.replace('_', ' ')}</span>
+              <span className="text-xs text-muted-foreground mono">
+                {conversation.intent.replace('_', ' ')}
+              </span>
             </div>
           </div>
         </div>
@@ -220,8 +286,11 @@ export default function ConversationThread({
                   <div
                     className={[
                       'px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed',
-                      msg.sender === 'customer' ?'bg-muted text-foreground rounded-bl-sm'
-                        : msg.sender === 'bot' ?'bg-primary-600 text-white rounded-br-sm' :'bg-green-600 text-white rounded-br-sm',
+                      msg.sender === 'customer'
+                        ? 'bg-muted text-foreground rounded-bl-sm'
+                        : msg.sender === 'bot'
+                          ? 'bg-primary-600 text-white rounded-br-sm'
+                          : 'bg-green-600 text-white rounded-br-sm',
                     ].join(' ')}
                   >
                     {msg.text}

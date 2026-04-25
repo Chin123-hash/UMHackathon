@@ -1,10 +1,32 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, ChevronLeft, Bot, ShoppingBag, Grid, Play, Tag, Star, Truck, Package, RotateCcw, Shield, Plus, Home, Compass, User, ShoppingCart } from 'lucide-react';
+import {
+  Heart,
+  MessageCircle,
+  Send,
+  Bookmark,
+  MoreHorizontal,
+  ChevronLeft,
+  Bot,
+  ShoppingBag,
+  Grid,
+  Play,
+  Tag,
+  Star,
+  Truck,
+  Package,
+  RotateCcw,
+  Shield,
+  Plus,
+  Home,
+  Compass,
+  User,
+  ShoppingCart,
+} from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
-import { createBrowserClient } from '@supabase/ssr'; 
-import { toast } from 'sonner'; 
+import { createBrowserClient } from '@supabase/ssr';
+import { toast } from 'sonner';
 
 /* ─── Types ─── */
 interface Product {
@@ -49,9 +71,11 @@ const products: Product[] = [
     shopName: 'NabilahFashion.my',
     location: 'Kuala Lumpur',
     badge: 'Bestseller',
-    description: 'Baju kurung moden dengan sulaman bunga halus. Kain premium, selesa dipakai seharian. Sesuai untuk majlis & harian.',
+    description:
+      'Baju kurung moden dengan sulaman bunga halus. Kain premium, selesa dipakai seharian. Sesuai untuk majlis & harian.',
     likes: 1247,
-    caption: '✨ New drop! Baju Kurung Moden Sulam Bunga — available in 3 warna cantik. Link in bio untuk order 🛍️ #BajuKurung #NabilahFashion #OotdMalaysia',
+    caption:
+      '✨ New drop! Baju Kurung Moden Sulam Bunga — available in 3 warna cantik. Link in bio untuk order 🛍️ #BajuKurung #NabilahFashion #OotdMalaysia',
   },
   {
     id: 'p-002',
@@ -67,9 +91,11 @@ const products: Product[] = [
     shopName: 'NabilahFashion.my',
     location: 'Kuala Lumpur',
     badge: 'Low Stock',
-    description: 'Blouse chiffon ringan & elegan. Potongan A-line yang menyembunyikan perut. Boleh mix & match dengan pelbagai bawahan.',
+    description:
+      'Blouse chiffon ringan & elegan. Potongan A-line yang menyembunyikan perut. Boleh mix & match dengan pelbagai bawahan.',
     likes: 893,
-    caption: '🌸 Blouse Chiffon Raya Exclusive — ringan, elegan & perfect untuk Raya! Tinggal sikit je stok 🔥 DM untuk order sekarang! #BlouseChiffon #RayaFashion',
+    caption:
+      '🌸 Blouse Chiffon Raya Exclusive — ringan, elegan & perfect untuk Raya! Tinggal sikit je stok 🔥 DM untuk order sekarang! #BlouseChiffon #RayaFashion',
   },
   {
     id: 'p-003',
@@ -85,9 +111,11 @@ const products: Product[] = [
     shopName: 'NabilahFashion.my',
     location: 'Kuala Lumpur',
     badge: 'Top Rated',
-    description: 'Dress batik corak pelangi yang viral di TikTok! Kain batik cotton premium, selesa & cantik. Free size friendly.',
+    description:
+      'Dress batik corak pelangi yang viral di TikTok! Kain batik cotton premium, selesa & cantik. Free size friendly.',
     likes: 3421,
-    caption: '🌈 Dress Batik Viral yang korang dah lama tunggu! Corak pelangi exclusive, kain cotton premium. Viral di TikTok & sekarang ada kat sini! #DressBatik #BatikViral',
+    caption:
+      '🌈 Dress Batik Viral yang korang dah lama tunggu! Corak pelangi exclusive, kain cotton premium. Viral di TikTok & sekarang ada kat sini! #DressBatik #BatikViral',
   },
   {
     id: 'p-004',
@@ -103,9 +131,11 @@ const products: Product[] = [
     shopName: 'NabilahFashion.my',
     location: 'Kuala Lumpur',
     badge: 'Hot Deal',
-    description: 'Tudung bawal premium dengan sulaman tepi yang cantik. Kain satin silk, tak panas & mudah dipakai. Tersedia 10 warna pilihan.',
+    description:
+      'Tudung bawal premium dengan sulaman tepi yang cantik. Kain satin silk, tak panas & mudah dipakai. Tersedia 10 warna pilihan.',
     likes: 2156,
-    caption: '💫 Tudung Bawal Premium Sulam — 10 warna pilihan! Kain satin silk yang lembut & tak panas. Perfect untuk daily & majlis 💕 #TudungBawal #HijabStyle',
+    caption:
+      '💫 Tudung Bawal Premium Sulam — 10 warna pilihan! Kain satin silk yang lembut & tak panas. Perfect untuk daily & majlis 💕 #TudungBawal #HijabStyle',
   },
   {
     id: 'p-005',
@@ -119,9 +149,11 @@ const products: Product[] = [
     colors: ['Black', 'Camel', 'Olive'],
     shopName: 'NabilahFashion.my',
     location: 'Kuala Lumpur',
-    description: 'Palazzo pants linen yang selesa & stylish. Potongan wide leg yang trendy. Sesuai untuk kerja & casual.',
+    description:
+      'Palazzo pants linen yang selesa & stylish. Potongan wide leg yang trendy. Sesuai untuk kerja & casual.',
     likes: 678,
-    caption: '🤍 Palazzo Pants Linen Wide Leg — comfort meets style! Available in 3 neutral tones. Perfect untuk office & casual wear 👌 #PalazzoPants #OotdMy',
+    caption:
+      '🤍 Palazzo Pants Linen Wide Leg — comfort meets style! Available in 3 neutral tones. Perfect untuk office & casual wear 👌 #PalazzoPants #OotdMy',
   },
   {
     id: 'p-006',
@@ -137,9 +169,11 @@ const products: Product[] = [
     shopName: 'NabilahFashion.my',
     location: 'Kuala Lumpur',
     badge: 'New Arrival',
-    description: 'Set baju melayu moden potongan slim fit. Kain teluk belanga premium. Lengkap dengan sampin & butang.',
+    description:
+      'Set baju melayu moden potongan slim fit. Kain teluk belanga premium. Lengkap dengan sampin & butang.',
     likes: 1089,
-    caption: '👔 New Arrival! Set Baju Melayu Moden Slim Fit — potongan kemas & moden. Lengkap dengan sampin & butang premium ✨ #BajuMelayu #RayaReady #NabilahFashion',
+    caption:
+      '👔 New Arrival! Set Baju Melayu Moden Slim Fit — potongan kemas & moden. Lengkap dengan sampin & butang premium ✨ #BajuMelayu #RayaReady #NabilahFashion',
   },
 ];
 
@@ -157,14 +191,20 @@ function IGHeader({ onDMClick }: { onDMClick: () => void }) {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="max-w-[470px] mx-auto px-4 py-3 flex items-center justify-between">
-        <span className="font-bold text-xl tracking-tight text-gray-900" style={{ fontFamily: 'Georgia, serif' }}>
+        <span
+          className="font-bold text-xl tracking-tight text-gray-900"
+          style={{ fontFamily: 'Georgia, serif' }}
+        >
           NabilahFashion
         </span>
         <div className="flex items-center gap-4">
           <button className="text-gray-800 hover:text-gray-600 transition-colors">
             <Heart size={24} />
           </button>
-          <button onClick={onDMClick} className="text-gray-800 hover:text-gray-600 transition-colors relative">
+          <button
+            onClick={onDMClick}
+            className="text-gray-800 hover:text-gray-600 transition-colors relative"
+          >
             <MessageCircle size={24} />
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
           </button>
@@ -182,12 +222,15 @@ function StoriesBar() {
         <div className="flex gap-4 overflow-x-auto scrollbar-none">
           {stories.map((story) => (
             <button key={story.id} className="flex flex-col items-center gap-1.5 shrink-0">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl ${
-                story.isOwn
-                  ? 'border-2 border-dashed border-gray-300'
-                  : story.hasNew
-                  ? 'p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600' :'p-0.5 bg-gray-200'
-              }`}>
+              <div
+                className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl ${
+                  story.isOwn
+                    ? 'border-2 border-dashed border-gray-300'
+                    : story.hasNew
+                      ? 'p-0.5 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600'
+                      : 'p-0.5 bg-gray-200'
+                }`}
+              >
                 {story.isOwn ? (
                   <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center">
                     <Plus size={20} className="text-gray-400" />
@@ -259,7 +302,10 @@ function FeedPost({
         {/* Shopping tag overlay */}
         <div className="absolute bottom-3 left-3">
           <button
-            onClick={(e) => { e.stopPropagation(); onProductClick(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onProductClick();
+            }}
             className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-semibold px-3 py-1.5 rounded-full shadow-md hover:bg-white transition-colors"
           >
             <ShoppingBag size={12} />
@@ -272,12 +318,19 @@ function FeedPost({
           </div>
         )}
         {product.badge && (
-          <div className={`absolute top-3 left-3 text-xs font-semibold px-2 py-1 rounded-full ${
-            product.badge === 'Low Stock' ? 'bg-orange-500 text-white' :
-            product.badge === 'Bestseller' ? 'bg-yellow-500 text-white' :
-            product.badge === 'Top Rated' ? 'bg-green-500 text-white' :
-            product.badge === 'New Arrival' ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'
-          }`}>
+          <div
+            className={`absolute top-3 left-3 text-xs font-semibold px-2 py-1 rounded-full ${
+              product.badge === 'Low Stock'
+                ? 'bg-orange-500 text-white'
+                : product.badge === 'Bestseller'
+                  ? 'bg-yellow-500 text-white'
+                  : product.badge === 'Top Rated'
+                    ? 'bg-green-500 text-white'
+                    : product.badge === 'New Arrival'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-red-500 text-white'
+            }`}
+          >
             {product.badge}
           </div>
         )}
@@ -288,19 +341,22 @@ function FeedPost({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-4">
             <button onClick={handleLike} className="transition-transform active:scale-125">
-              <Heart
-                size={24}
-                className={liked ? 'fill-red-500 text-red-500' : 'text-gray-800'}
-              />
+              <Heart size={24} className={liked ? 'fill-red-500 text-red-500' : 'text-gray-800'} />
             </button>
-            <button onClick={onChatClick} className="text-gray-800 hover:text-gray-600 transition-colors">
+            <button
+              onClick={onChatClick}
+              className="text-gray-800 hover:text-gray-600 transition-colors"
+            >
               <MessageCircle size={24} />
             </button>
             <button className="text-gray-800 hover:text-gray-600 transition-colors">
               <Send size={22} />
             </button>
           </div>
-          <button onClick={() => setSaved((s) => !s)} className="transition-transform active:scale-110">
+          <button
+            onClick={() => setSaved((s) => !s)}
+            className="transition-transform active:scale-110"
+          >
             <Bookmark
               size={24}
               className={saved ? 'fill-gray-800 text-gray-800' : 'text-gray-800'}
@@ -309,17 +365,23 @@ function FeedPost({
         </div>
 
         {/* Likes */}
-        <p className="text-sm font-semibold text-gray-900 mb-1">{likeCount.toLocaleString()} likes</p>
+        <p className="text-sm font-semibold text-gray-900 mb-1">
+          {likeCount.toLocaleString()} likes
+        </p>
 
         {/* Price tag */}
         <div className="flex items-center gap-2 mb-1.5">
           <span className="text-sm font-bold text-gray-900">RM{product.price.toFixed(2)}</span>
           {product.originalPrice && (
-            <span className="text-xs text-gray-400 line-through">RM{product.originalPrice.toFixed(2)}</span>
+            <span className="text-xs text-gray-400 line-through">
+              RM{product.originalPrice.toFixed(2)}
+            </span>
           )}
           <div className="flex items-center gap-0.5 ml-auto">
             <Star size={11} className="fill-yellow-400 text-yellow-400" />
-            <span className="text-xs text-gray-500">{product.rating} · {product.sold} sold</span>
+            <span className="text-xs text-gray-500">
+              {product.rating} · {product.sold} sold
+            </span>
           </div>
         </div>
 
@@ -330,20 +392,28 @@ function FeedPost({
         </p>
 
         {/* View all comments */}
-        <button onClick={onChatClick} className="text-sm text-gray-400 mt-1 hover:text-gray-600 transition-colors">
+        <button
+          onClick={onChatClick}
+          className="text-sm text-gray-400 mt-1 hover:text-gray-600 transition-colors"
+        >
           View all comments
         </button>
 
         {/* Add comment */}
         <div className="flex items-center gap-2 mt-2 pb-3 border-t border-gray-50 pt-2">
-          <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs">👤</div>
+          <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+            👤
+          </div>
           <button
             onClick={onChatClick}
             className="flex-1 text-left text-sm text-gray-400 hover:text-gray-600 transition-colors"
           >
             Add a comment...
           </button>
-          <button onClick={onChatClick} className="text-blue-500 text-sm font-semibold hover:text-blue-600">
+          <button
+            onClick={onChatClick}
+            className="text-blue-500 text-sm font-semibold hover:text-blue-600"
+          >
             Post
           </button>
         </div>
@@ -404,7 +474,13 @@ function ProfileHeader({ onChatClick }: { onChatClick: () => void }) {
 }
 
 /* ─── Grid View ─── */
-function GridView({ products, onProductClick }: { products: Product[]; onProductClick: (p: Product) => void }) {
+function GridView({
+  products,
+  onProductClick,
+}: {
+  products: Product[];
+  onProductClick: (p: Product) => void;
+}) {
   return (
     <div className="grid grid-cols-3 gap-0.5">
       {products.map((product) => (
@@ -420,7 +496,9 @@ function GridView({ products, onProductClick }: { products: Product[]; onProduct
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
             <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-3 text-white font-semibold text-sm">
-              <span className="flex items-center gap-1"><Heart size={14} className="fill-white" /> {product.likes.toLocaleString()}</span>
+              <span className="flex items-center gap-1">
+                <Heart size={14} className="fill-white" /> {product.likes.toLocaleString()}
+              </span>
             </div>
           </div>
           {product.badge && (
@@ -499,7 +577,9 @@ function ProductDetailSheet({
           <div className="flex items-baseline gap-2 mb-1">
             <span className="text-xl font-bold text-gray-900">RM{product.price.toFixed(2)}</span>
             {product.originalPrice && (
-              <span className="text-sm text-gray-400 line-through">RM{product.originalPrice.toFixed(2)}</span>
+              <span className="text-sm text-gray-400 line-through">
+                RM{product.originalPrice.toFixed(2)}
+              </span>
             )}
           </div>
           <h2 className="text-base font-semibold text-gray-800 mb-1">{product.name}</h2>
@@ -511,7 +591,9 @@ function ProductDetailSheet({
             <span>·</span>
             <span>{product.sold} sold</span>
             <span>·</span>
-            <span className={product.stock < 10 ? 'text-orange-500 font-medium' : ''}>{product.stock} in stock</span>
+            <span className={product.stock < 10 ? 'text-orange-500 font-medium' : ''}>
+              {product.stock} in stock
+            </span>
           </div>
         </div>
 
@@ -526,7 +608,8 @@ function ProductDetailSheet({
                   onClick={() => setSelectedSize(s)}
                   className={`px-4 py-1.5 rounded-full border text-xs font-medium transition-all ${
                     selectedSize === s
-                      ? 'border-gray-900 bg-gray-900 text-white' :'border-gray-200 text-gray-600 hover:border-gray-400'
+                      ? 'border-gray-900 bg-gray-900 text-white'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-400'
                   }`}
                 >
                   {s}
@@ -535,7 +618,9 @@ function ProductDetailSheet({
             </div>
           </div>
           <div className="mb-3">
-            <p className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Color</p>
+            <p className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+              Color
+            </p>
             <div className="flex flex-wrap gap-2">
               {product.colors.map((c) => (
                 <button
@@ -543,7 +628,8 @@ function ProductDetailSheet({
                   onClick={() => setSelectedColor(c)}
                   className={`px-4 py-1.5 rounded-full border text-xs font-medium transition-all ${
                     selectedColor === c
-                      ? 'border-gray-900 bg-gray-900 text-white' :'border-gray-200 text-gray-600 hover:border-gray-400'
+                      ? 'border-gray-900 bg-gray-900 text-white'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-400'
                   }`}
                 >
                   {c}
@@ -552,7 +638,9 @@ function ProductDetailSheet({
             </div>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Quantity</p>
+            <p className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+              Quantity
+            </p>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
@@ -573,7 +661,9 @@ function ProductDetailSheet({
 
         {/* Description */}
         <div className="px-4 py-3 border-b border-gray-100">
-          <p className="text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">Description</p>
+          <p className="text-xs font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+            Description
+          </p>
           <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
         </div>
 
@@ -583,7 +673,9 @@ function ProductDetailSheet({
             <Truck size={16} className="text-gray-500 mt-0.5 shrink-0" />
             <div>
               <p className="font-medium text-gray-800">Free shipping on orders over RM150</p>
-              <p className="text-xs text-gray-400 mt-0.5">Semenanjung RM6.90 · Sabah/Sarawak RM9.90</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Semenanjung RM6.90 · Sabah/Sarawak RM9.90
+              </p>
             </div>
           </div>
           <div className="flex items-center justify-around text-center pt-3 border-t border-gray-100">
@@ -594,7 +686,9 @@ function ProductDetailSheet({
             ].map(({ icon: IconComp, label }) => (
               <div key={label} className="flex flex-col items-center gap-1">
                 <IconComp size={18} className="text-gray-500" />
-                <span className="text-xs text-gray-400 whitespace-pre-line leading-tight">{label}</span>
+                <span className="text-xs text-gray-400 whitespace-pre-line leading-tight">
+                  {label}
+                </span>
               </div>
             ))}
           </div>
@@ -622,13 +716,7 @@ function ProductDetailSheet({
 }
 
 /* ─── DM Chat Panel ─── */
-function DMChatPanel({
-  product,
-  onClose,
-}: {
-  product: Product | null;
-  onClose: () => void;
-}) {
+function DMChatPanel({ product, onClose }: { product: Product | null; onClose: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -638,9 +726,9 @@ function DMChatPanel({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<any>(null);
 
-  const conversationId = "customer-insta-demo-001"; // Stable ID for this demo
+  const conversationId = 'customer-insta-demo-001'; // Stable ID for this demo
   const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!, 
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
@@ -654,12 +742,17 @@ function DMChatPanel({
         .order('created_at', { ascending: true });
 
       if (data) {
-        setMessages(data.map(m => ({
-          id: m.id,
-          sender: m.sender as any,
-          text: m.text,
-          time: new Date(m.created_at).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })
-        })));
+        setMessages(
+          data.map((m) => ({
+            id: m.id,
+            sender: m.sender as any,
+            text: m.text,
+            time: new Date(m.created_at).toLocaleTimeString('en-MY', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          }))
+        );
       }
     };
     fetchHistory();
@@ -667,29 +760,32 @@ function DMChatPanel({
 
   // Exact phrase to trigger backend human escalation
   const quickReplies = [
-    'Ada stok size M?', 
-    'Pos ke Sabah?', 
-    'Boleh COD?', 
-    'Bila restock?', 
-    'I want to talk to the owner' 
+    'Ada stok size M?',
+    'Pos ke Sabah?',
+    'Boleh COD?',
+    'Bila restock?',
+    'I want to talk to the owner',
   ];
 
   // Integrated sendMessage calling real API
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
     const now = new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' });
-    
+
     // 1. Update UI
-    setMessages((prev) => [...prev, { id: `msg-${Date.now()}`, sender: 'customer', text, time: now }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: `msg-${Date.now()}`, sender: 'customer', text, time: now },
+    ]);
     setInput('');
     setIsTyping(true);
 
     try {
       // 2. Real API call to Chat Route
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, message: text, productId: product?.id })
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId, message: text, productId: product?.id }),
       });
 
       const data = await res.json();
@@ -700,13 +796,16 @@ function DMChatPanel({
       if (confirmTag) {
         const orderData = JSON.parse(confirmTag[1]);
         setPendingOrder(orderData);
-        reply = reply.replace(confirmTag[0], "").trim();
-        setTimeout(() => setIsModalOpen(true), 1000); 
+        reply = reply.replace(confirmTag[0], '').trim();
+        setTimeout(() => setIsModalOpen(true), 1000);
       }
 
-      setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, sender: 'bot', text: reply, time: now }]);
+      setMessages((prev) => [
+        ...prev,
+        { id: `bot-${Date.now()}`, sender: 'bot', text: reply, time: now },
+      ]);
     } catch (e) {
-      toast.error("Bot is currently offline.");
+      toast.error('Bot is currently offline.');
     } finally {
       setIsTyping(false);
     }
@@ -716,24 +815,27 @@ function DMChatPanel({
   const handleFinalConfirm = async () => {
     setIsModalOpen(false);
     setIsTyping(true);
-    
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        conversationId, 
-        message: "ACTION_CONFIRM_ORDER", 
+
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversationId,
+        message: 'ACTION_CONFIRM_ORDER',
         productId: pendingOrder.id,
         qty: pendingOrder.qty,
-        totalPrice: pendingOrder.total, 
-        customerName: pendingOrder.customerName || "Instagram User",
-        destination: pendingOrder.destination || "Selangor"
-      })
+        totalPrice: pendingOrder.total,
+        customerName: pendingOrder.customerName || 'Instagram User',
+        destination: pendingOrder.destination || 'Selangor',
+      }),
     });
-    
+
     const data = await res.json();
     const now = new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' });
-    setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'bot', text: data.reply, time: now }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now().toString(), sender: 'bot', text: data.reply, time: now },
+    ]);
     setIsTyping(false);
   };
 
@@ -761,15 +863,23 @@ function DMChatPanel({
           </div>
         </div>
         <div className="flex items-center gap-3 text-gray-600">
-          <button><Phone size={20} /></button>
-          <button><Video size={20} /></button>
+          <button>
+            <Phone size={20} />
+          </button>
+          <button>
+            <Video size={20} />
+          </button>
         </div>
       </div>
 
       {/* Product context */}
       {product && (
         <div className="bg-gray-50 border-b border-gray-100 px-4 py-2 flex items-center gap-3 shrink-0">
-          <img src={product.image} alt={product.name} className="w-10 h-10 rounded-lg object-cover" />
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-10 h-10 rounded-lg object-cover"
+          />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-700 truncate">{product.name}</p>
             <p className="text-xs font-bold text-gray-900">RM{product.price.toFixed(2)}</p>
@@ -794,15 +904,17 @@ function DMChatPanel({
             )}
             <div
               className={`max-w-[72%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                msg.sender === 'customer' 
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-sm' 
+                msg.sender === 'customer'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-sm'
                   : msg.sender === 'system'
-                  ? 'bg-green-50 text-green-700 border border-green-100 rounded-lg text-xs italic'
-                  : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+                    ? 'bg-green-50 text-green-700 border border-green-100 rounded-lg text-xs italic'
+                    : 'bg-gray-100 text-gray-800 rounded-bl-sm'
               }`}
             >
               <p>{msg.text}</p>
-              <p className={`text-xs mt-0.5 ${msg.sender === 'customer' ? 'text-white/70 text-right' : 'text-gray-400'}`}>
+              <p
+                className={`text-xs mt-0.5 ${msg.sender === 'customer' ? 'text-white/70 text-right' : 'text-gray-400'}`}
+              >
                 {msg.time}
               </p>
             </div>
@@ -836,7 +948,9 @@ function DMChatPanel({
         <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 flex gap-2 items-start">
           <Bot size={14} className="text-gray-400 shrink-0 mt-0.5" />
           <p className="text-[11px] text-gray-500 leading-relaxed">
-            <span className="font-semibold text-gray-600">AI Assistant Active:</span> Handled by AI by default. If you find any hallucinations or misinformation, please request a human seller below.
+            <span className="font-semibold text-gray-600">AI Assistant Active:</span> Handled by AI
+            by default. If you find any hallucinations or misinformation, please request a human
+            seller below.
           </p>
         </div>
       </div>
@@ -848,8 +962,8 @@ function DMChatPanel({
             key={qr}
             onClick={() => sendMessage(qr)}
             className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-full border transition-colors shrink-0 ${
-              qr === 'I want to talk to the owner' 
-                ? 'border-blue-400 text-blue-600 bg-blue-50 hover:bg-blue-100 font-medium' 
+              qr === 'I want to talk to the owner'
+                ? 'border-blue-400 text-blue-600 bg-blue-50 hover:bg-blue-100 font-medium'
                 : 'border-gray-300 text-gray-600 hover:border-gray-500 hover:text-gray-800'
             }`}
           >
@@ -878,7 +992,9 @@ function DMChatPanel({
           </button>
         ) : (
           <div className="flex items-center gap-3 text-gray-500">
-            <button><Heart size={22} /></button>
+            <button>
+              <Heart size={22} />
+            </button>
           </div>
         )}
       </div>
@@ -892,29 +1008,35 @@ function DMChatPanel({
                 <ShoppingCart size={24} />
               </div>
               <h3 className="font-bold text-lg mb-2 text-gray-800">Confirm Order?</h3>
-              
+
               {/* Updated Description with Price */}
               <div className="text-sm text-gray-500 mb-6 space-y-1 leading-relaxed">
                 <p>
-                  Hi <span className="font-bold text-gray-800">{pendingOrder?.customerName}</span>! 
+                  Hi <span className="font-bold text-gray-800">{pendingOrder?.customerName}</span>!
                 </p>
                 <p>
-                  Please confirm order for <span className="font-bold text-gray-700">{pendingOrder?.qty}x {pendingOrder?.name}</span>.
+                  Please confirm order for{' '}
+                  <span className="font-bold text-gray-700">
+                    {pendingOrder?.qty}x {pendingOrder?.name}
+                  </span>
+                  .
                 </p>
                 <div className="mt-3 pt-3 border-t border-gray-100">
                   <p className="text-xs uppercase tracking-widest text-gray-400">Total Payment</p>
-                  <p className="text-2xl font-black text-pink-600">RM{pendingOrder?.total?.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-pink-600">
+                    RM{pendingOrder?.total?.toFixed(2)}
+                  </p>
                 </div>
               </div>
 
               <div className="flex w-full gap-3">
-                <button 
+                <button
                   onClick={() => setIsModalOpen(false)}
                   className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleFinalConfirm}
                   className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-bold shadow-lg active:scale-95 transition-all"
                 >
@@ -932,7 +1054,16 @@ function DMChatPanel({
 // Placeholder icons for DM header
 function Phone({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
     </svg>
   );
@@ -940,7 +1071,16 @@ function Phone({ size }: { size: number }) {
 
 function Video({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polygon points="23 7 16 12 23 17 23 7" />
       <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
     </svg>
@@ -948,7 +1088,13 @@ function Video({ size }: { size: number }) {
 }
 
 /* ─── Tab Bar ─── */
-function TabBar({ activeTab, onTabChange }: { activeTab: string; onTabChange: (t: string) => void }) {
+function TabBar({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: string;
+  onTabChange: (t: string) => void;
+}) {
   const tabs = [
     { id: 'feed', icon: Home },
     { id: 'explore', icon: Compass },
@@ -996,13 +1142,23 @@ export default function InstagramMockPage() {
 
   return (
     <div className="min-h-screen bg-white font-sans">
-      <IGHeader onDMClick={() => { setChatProduct(null); setChatOpen(true); }} />
+      <IGHeader
+        onDMClick={() => {
+          setChatProduct(null);
+          setChatOpen(true);
+        }}
+      />
 
       <div className="max-w-[470px] mx-auto pb-20">
         {/* Profile tab */}
         {isProfileTab && (
           <>
-            <ProfileHeader onChatClick={() => { setChatProduct(null); setChatOpen(true); }} />
+            <ProfileHeader
+              onChatClick={() => {
+                setChatProduct(null);
+                setChatOpen(true);
+              }}
+            />
             {/* Grid/Reels tabs */}
             <div className="flex border-b border-gray-200">
               <button className="flex-1 py-3 flex items-center justify-center border-b-2 border-gray-900">
@@ -1049,9 +1205,7 @@ export default function InstagramMockPage() {
       )}
 
       {/* DM Chat */}
-      {chatOpen && (
-        <DMChatPanel product={chatProduct} onClose={() => setChatOpen(false)} />
-      )}
+      {chatOpen && <DMChatPanel product={chatProduct} onClose={() => setChatOpen(false)} />}
     </div>
   );
 }
