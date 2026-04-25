@@ -21,18 +21,174 @@ interface ProductRow {
 }
 
 const initialProducts: ProductRow[] = [
-  { id: 'prod-001', sku: 'BKM-001-S', name: 'Baju Kurung Moden Pastel', category: 'Baju Kurung', size: 'S', color: 'Dusty Pink', priceRM: 89.90, stock: 0, threshold: 5, stockStatus: 'out-of-stock', lastBotQuery: '15:24:31', eastMalaysia: true },
-  { id: 'prod-002', sku: 'BKM-001-M', name: 'Baju Kurung Moden Pastel', category: 'Baju Kurung', size: 'M', color: 'Dusty Pink', priceRM: 89.90, stock: 3, threshold: 5, stockStatus: 'low-stock', lastBotQuery: '15:24:31', eastMalaysia: true },
-  { id: 'prod-003', sku: 'BKM-001-L', name: 'Baju Kurung Moden Pastel', category: 'Baju Kurung', size: 'L', color: 'Dusty Pink', priceRM: 89.90, stock: 12, threshold: 5, stockStatus: 'in-stock', lastBotQuery: '15:21:05', eastMalaysia: true },
-  { id: 'prod-004', sku: 'BKM-001-XL', name: 'Baju Kurung Moden Pastel', category: 'Baju Kurung', size: 'XL', color: 'Dusty Pink', priceRM: 89.90, stock: 2, threshold: 5, stockStatus: 'low-stock', lastBotQuery: '15:18:44', eastMalaysia: true },
-  { id: 'prod-005', sku: 'BBS-003-S', name: 'Blouse Batik Selangor', category: 'Blouse', size: 'S', color: 'Navy Blue', priceRM: 65.00, stock: 8, threshold: 5, stockStatus: 'in-stock', lastBotQuery: '15:12:20', eastMalaysia: false },
-  { id: 'prod-006', sku: 'BBS-003-M', name: 'Blouse Batik Selangor', category: 'Blouse', size: 'M', color: 'Navy Blue', priceRM: 65.00, stock: 3, threshold: 8, stockStatus: 'low-stock', lastBotQuery: '15:09:55', eastMalaysia: false },
-  { id: 'prod-007', sku: 'BBS-003-L', name: 'Blouse Batik Selangor', category: 'Blouse', size: 'L', color: 'Navy Blue', priceRM: 65.00, stock: 15, threshold: 5, stockStatus: 'in-stock', lastBotQuery: '14:58:30', eastMalaysia: false },
-  { id: 'prod-008', sku: 'TKL-005-M', name: 'Tudung Khimar Lace', category: 'Tudung', size: 'M', color: 'Cream White', priceRM: 45.00, stock: 22, threshold: 10, stockStatus: 'in-stock', lastBotQuery: '15:14:12', eastMalaysia: true },
-  { id: 'prod-009', sku: 'TKL-005-L', name: 'Tudung Khimar Lace', category: 'Tudung', size: 'L', color: 'Cream White', priceRM: 45.00, stock: 1, threshold: 10, stockStatus: 'low-stock', lastBotQuery: '15:16:44', eastMalaysia: true },
-  { id: 'prod-010', sku: 'KBT-007-S', name: 'Kebaya Teluk Belanga', category: 'Kebaya', size: 'S', color: 'Sage Green', priceRM: 120.00, stock: 6, threshold: 3, stockStatus: 'in-stock', lastBotQuery: '14:45:08', eastMalaysia: false },
-  { id: 'prod-011', sku: 'KBT-007-M', name: 'Kebaya Teluk Belanga', category: 'Kebaya', size: 'M', color: 'Sage Green', priceRM: 120.00, stock: 9, threshold: 3, stockStatus: 'in-stock', lastBotQuery: '15:02:33', eastMalaysia: false },
-  { id: 'prod-012', sku: 'KBT-007-XL', name: 'Kebaya Teluk Belanga', category: 'Kebaya', size: 'XL', color: 'Sage Green', priceRM: 120.00, stock: 4, threshold: 3, stockStatus: 'in-stock', lastBotQuery: '14:38:17', eastMalaysia: false },
+  {
+    id: 'prod-001',
+    sku: 'BKM-001-S',
+    name: 'Baju Kurung Moden Pastel',
+    category: 'Baju Kurung',
+    size: 'S',
+    color: 'Dusty Pink',
+    priceRM: 89.9,
+    stock: 0,
+    threshold: 5,
+    stockStatus: 'out-of-stock',
+    lastBotQuery: '15:24:31',
+    eastMalaysia: true,
+  },
+  {
+    id: 'prod-002',
+    sku: 'BKM-001-M',
+    name: 'Baju Kurung Moden Pastel',
+    category: 'Baju Kurung',
+    size: 'M',
+    color: 'Dusty Pink',
+    priceRM: 89.9,
+    stock: 3,
+    threshold: 5,
+    stockStatus: 'low-stock',
+    lastBotQuery: '15:24:31',
+    eastMalaysia: true,
+  },
+  {
+    id: 'prod-003',
+    sku: 'BKM-001-L',
+    name: 'Baju Kurung Moden Pastel',
+    category: 'Baju Kurung',
+    size: 'L',
+    color: 'Dusty Pink',
+    priceRM: 89.9,
+    stock: 12,
+    threshold: 5,
+    stockStatus: 'in-stock',
+    lastBotQuery: '15:21:05',
+    eastMalaysia: true,
+  },
+  {
+    id: 'prod-004',
+    sku: 'BKM-001-XL',
+    name: 'Baju Kurung Moden Pastel',
+    category: 'Baju Kurung',
+    size: 'XL',
+    color: 'Dusty Pink',
+    priceRM: 89.9,
+    stock: 2,
+    threshold: 5,
+    stockStatus: 'low-stock',
+    lastBotQuery: '15:18:44',
+    eastMalaysia: true,
+  },
+  {
+    id: 'prod-005',
+    sku: 'BBS-003-S',
+    name: 'Blouse Batik Selangor',
+    category: 'Blouse',
+    size: 'S',
+    color: 'Navy Blue',
+    priceRM: 65.0,
+    stock: 8,
+    threshold: 5,
+    stockStatus: 'in-stock',
+    lastBotQuery: '15:12:20',
+    eastMalaysia: false,
+  },
+  {
+    id: 'prod-006',
+    sku: 'BBS-003-M',
+    name: 'Blouse Batik Selangor',
+    category: 'Blouse',
+    size: 'M',
+    color: 'Navy Blue',
+    priceRM: 65.0,
+    stock: 3,
+    threshold: 8,
+    stockStatus: 'low-stock',
+    lastBotQuery: '15:09:55',
+    eastMalaysia: false,
+  },
+  {
+    id: 'prod-007',
+    sku: 'BBS-003-L',
+    name: 'Blouse Batik Selangor',
+    category: 'Blouse',
+    size: 'L',
+    color: 'Navy Blue',
+    priceRM: 65.0,
+    stock: 15,
+    threshold: 5,
+    stockStatus: 'in-stock',
+    lastBotQuery: '14:58:30',
+    eastMalaysia: false,
+  },
+  {
+    id: 'prod-008',
+    sku: 'TKL-005-M',
+    name: 'Tudung Khimar Lace',
+    category: 'Tudung',
+    size: 'M',
+    color: 'Cream White',
+    priceRM: 45.0,
+    stock: 22,
+    threshold: 10,
+    stockStatus: 'in-stock',
+    lastBotQuery: '15:14:12',
+    eastMalaysia: true,
+  },
+  {
+    id: 'prod-009',
+    sku: 'TKL-005-L',
+    name: 'Tudung Khimar Lace',
+    category: 'Tudung',
+    size: 'L',
+    color: 'Cream White',
+    priceRM: 45.0,
+    stock: 1,
+    threshold: 10,
+    stockStatus: 'low-stock',
+    lastBotQuery: '15:16:44',
+    eastMalaysia: true,
+  },
+  {
+    id: 'prod-010',
+    sku: 'KBT-007-S',
+    name: 'Kebaya Teluk Belanga',
+    category: 'Kebaya',
+    size: 'S',
+    color: 'Sage Green',
+    priceRM: 120.0,
+    stock: 6,
+    threshold: 3,
+    stockStatus: 'in-stock',
+    lastBotQuery: '14:45:08',
+    eastMalaysia: false,
+  },
+  {
+    id: 'prod-011',
+    sku: 'KBT-007-M',
+    name: 'Kebaya Teluk Belanga',
+    category: 'Kebaya',
+    size: 'M',
+    color: 'Sage Green',
+    priceRM: 120.0,
+    stock: 9,
+    threshold: 3,
+    stockStatus: 'in-stock',
+    lastBotQuery: '15:02:33',
+    eastMalaysia: false,
+  },
+  {
+    id: 'prod-012',
+    sku: 'KBT-007-XL',
+    name: 'Kebaya Teluk Belanga',
+    category: 'Kebaya',
+    size: 'XL',
+    color: 'Sage Green',
+    priceRM: 120.0,
+    stock: 4,
+    threshold: 3,
+    stockStatus: 'in-stock',
+    lastBotQuery: '14:38:17',
+    eastMalaysia: false,
+  },
 ];
 
 type SortKey = 'name' | 'stock' | 'priceRM' | 'lastBotQuery';
@@ -114,7 +270,8 @@ export default function ProductsTable() {
 
   const toast = {
     error: (message: string) => console.error(message),
-    success: (message: string, options?: { description?: string }) => console.log(message, options?.description ?? ''),
+    success: (message: string, options?: { description?: string }) =>
+      console.log(message, options?.description ?? ''),
   };
 
   return (
@@ -122,7 +279,10 @@ export default function ProductsTable() {
       {/* Table header controls */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-border flex-wrap">
         <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search
+            size={14}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
           <input
             type="text"
             placeholder="Search SKU, product, colour…"
@@ -139,7 +299,8 @@ export default function ProductsTable() {
               className={[
                 'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors mono',
                 stockFilter === f
-                  ? 'bg-primary-600 text-white' :'bg-muted text-muted-foreground hover:bg-border',
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-border',
               ].join(' ')}
             >
               {stockFilterLabels[f]}
@@ -216,7 +377,13 @@ export default function ProductsTable() {
                     icon={Package}
                     title="No products match your filter"
                     description="Try adjusting the search or status filter to find your SKUs."
-                    action={{ label: 'Clear Filters', onClick: () => { setSearch(''); setStockFilter('all'); } }}
+                    action={{
+                      label: 'Clear Filters',
+                      onClick: () => {
+                        setSearch('');
+                        setStockFilter('all');
+                      },
+                    }}
                   />
                 </td>
               </tr>
@@ -278,7 +445,8 @@ export default function ProductsTable() {
                           product.stock === 0
                             ? 'text-red-500'
                             : product.stock < product.threshold
-                            ? 'text-amber-600' :'text-foreground'
+                              ? 'text-amber-600'
+                              : 'text-foreground'
                         }`}
                       >
                         {product.stock}
@@ -324,7 +492,9 @@ export default function ProductsTable() {
       {/* Table footer */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-muted/30">
         <p className="text-xs text-muted-foreground mono">
-          Showing {filtered.length} SKUs · {products.filter((p) => p.stockStatus === 'out-of-stock').length} out of stock · {products.filter((p) => p.stockStatus === 'low-stock').length} low stock
+          Showing {filtered.length} SKUs ·{' '}
+          {products.filter((p) => p.stockStatus === 'out-of-stock').length} out of stock ·{' '}
+          {products.filter((p) => p.stockStatus === 'low-stock').length} low stock
         </p>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mono">
           <Bot size={12} className="text-primary-600" />

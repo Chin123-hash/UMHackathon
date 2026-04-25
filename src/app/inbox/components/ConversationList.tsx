@@ -12,14 +12,6 @@ interface ConversationListProps {
   viralSpike: boolean;
 }
 
-const statusFilters = [
-  { key: 'all', label: 'All' },
-  { key: 'unanswered', label: 'Unanswered' },
-  { key: 'bot-responded', label: 'Bot' },
-  { key: 'escalated', label: 'Escalated' },
-  { key: 'owner-replied', label: 'Owner' },
-];
-
 const avatarColors = [
   'bg-primary-600',
   'bg-purple-500',
@@ -38,22 +30,21 @@ export default function ConversationList({
   viralSpike,
 }: ConversationListProps) {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
 
-  const filtered = conversations.filter((c) => {
-    const matchSearch =
+  const filtered = conversations.filter(
+    (c) =>
       c.customer.toLowerCase().includes(search.toLowerCase()) ||
-      c.lastMessage.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'all' || c.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+      c.lastMessage.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="w-72 xl:w-80 shrink-0 flex flex-col border-r border-border">
-      {/* Search */}
+    <div className="w-72 xl:w-80 shrink-0 flex flex-col border-r border-border bg-white z-10 relative">
       <div className="p-3 border-b border-border space-y-2">
         <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search
+            size={14}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
           <input
             type="text"
             placeholder="Search conversations…"
@@ -62,31 +53,9 @@ export default function ConversationList({
             className="w-full pl-8 pr-3 py-2 text-sm bg-muted rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary-600/30 focus:border-primary-600 transition-colors"
           />
         </div>
-        {/* Status filter chips */}
-        <div className="flex gap-1 flex-wrap">
-          {statusFilters.map((f) => (
-            <button
-              key={`filter-${f.key}`}
-              onClick={() => setStatusFilter(f.key)}
-              className={[
-                'px-2 py-1 rounded-md text-xs font-medium transition-colors mono',
-                statusFilter === f.key
-                  ? 'bg-primary-600 text-white' :'bg-muted text-muted-foreground hover:bg-border',
-              ].join(' ')}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* List */}
       <ul className="flex-1 overflow-y-auto scrollbar-thin">
-        {filtered.length === 0 && (
-          <li className="p-6 text-center text-sm text-muted-foreground">
-            No conversations match your filter.
-          </li>
-        )}
         {filtered.map((conv, idx) => (
           <li
             key={conv.id}
@@ -94,15 +63,13 @@ export default function ConversationList({
             className={[
               'px-4 py-3 cursor-pointer border-b border-border/50 transition-colors',
               selectedId === conv.id
-                ? 'bg-primary-50 border-l-2 border-l-primary-600' :'hover:bg-muted/50',
-              viralSpike && conv.id.startsWith('spike') ? 'animate-slide-up' : '',
+                ? 'bg-primary-50 border-l-2 border-l-primary-600'
+                : 'hover:bg-muted/50',
             ].join(' ')}
           >
             <div className="flex gap-2.5">
               <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${
-                  avatarColors[idx % avatarColors.length]
-                }`}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${avatarColors[idx % avatarColors.length]}`}
               >
                 {conv.avatar}
               </div>
@@ -113,16 +80,9 @@ export default function ConversationList({
                   </span>
                   <span className="text-xs text-muted-foreground mono shrink-0">{conv.time}</span>
                 </div>
-                <p className="text-xs text-muted-foreground truncate italic">
-                  {conv.lastMessage}
-                </p>
+                <p className="text-xs text-muted-foreground truncate italic">{conv.lastMessage}</p>
                 <div className="flex items-center justify-between mt-1.5">
-                  <StatusBadge status={conv.status} />
-                  {conv.unread > 0 && (
-                    <span className="bg-accent text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                      {conv.unread}
-                    </span>
-                  )}
+                  <StatusBadge status={conv.status as any} />
                 </div>
               </div>
             </div>

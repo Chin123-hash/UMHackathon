@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import useSWR, { mutate } from "swr";
+import React, { useState } from 'react';
+import useSWR, { mutate } from 'swr';
 import {
   Search,
   Edit2,
@@ -12,11 +12,11 @@ import {
   Bot,
   Package,
   RefreshCw,
-} from "lucide-react";
-import StatusBadge from "@/components/ui/StatusBadge";
-import EmptyState from "@/components/ui/EmptyState";
-import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+} from 'lucide-react';
+import StatusBadge from '@/components/ui/StatusBadge';
+import EmptyState from '@/components/ui/EmptyState';
+import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 interface ProductRow {
   id: string;
@@ -28,57 +28,60 @@ interface ProductRow {
   created_at: string;
 }
 
-type SortKey = "name" | "stock" | "price";
-type StockFilter = "all" | "low-stock" | "out-of-stock" | "in-stock";
+type SortKey = 'name' | 'stock' | 'price';
+type StockFilter = 'all' | 'low-stock' | 'out-of-stock' | 'in-stock';
 
 const stockFilterLabels: Record<StockFilter, string> = {
-  all: "All",
-  "in-stock": "In Stock",
-  "low-stock": "Low Stock",
-  "out-of-stock": "Out of Stock",
+  all: 'All',
+  'in-stock': 'In Stock',
+  'low-stock': 'Low Stock',
+  'out-of-stock': 'Out of Stock',
 };
 
-const LOW_STOCK_THRESHOLD = 50;
+const LOW_STOCK_THRESHOLD = 30;
 
 async function fetchProducts(): Promise<ProductRow[]> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .order("name", { ascending: true });
+    .from('products')
+    .select('*')
+    .order('name', { ascending: true });
 
   if (error) {
-    console.error("[v0] Supabase error fetching products:", error.message, error.code, error.details);
-    throw new Error(error.message || "Failed to fetch products from database");
+    console.error(
+      '[v0] Supabase error fetching products:',
+      error.message,
+      error.code,
+      error.details
+    );
+    throw new Error(error.message || 'Failed to fetch products from database');
   }
 
   return data || [];
 }
 
-function getStockStatus(
-  stock: number
-): "in-stock" | "low-stock" | "out-of-stock" {
-  if (stock === 0) return "out-of-stock";
-  if (stock < LOW_STOCK_THRESHOLD) return "low-stock";
-  return "in-stock";
+function getStockStatus(stock: number): 'in-stock' | 'low-stock' | 'out-of-stock' {
+  if (stock === 0) return 'out-of-stock';
+  if (stock < LOW_STOCK_THRESHOLD) return 'low-stock';
+  return 'in-stock';
 }
 
 export default function ProductsTableLive() {
-  const { data: products, error, isLoading } = useSWR("products", fetchProducts);
+  const { data: products, error, isLoading } = useSWR('products', fetchProducts);
 
-  const [search, setSearch] = useState("");
-  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [search, setSearch] = useState('');
+  const [stockFilter, setStockFilter] = useState<StockFilter>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
+  const [editValue, setEditValue] = useState<string>('');
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortKey(key);
-      setSortDir("asc");
+      setSortDir('asc');
     }
   };
 
@@ -88,13 +91,13 @@ export default function ProductsTableLive() {
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase());
       const status = getStockStatus(p.stock);
-      const matchStatus = stockFilter === "all" || status === stockFilter;
+      const matchStatus = stockFilter === 'all' || status === stockFilter;
       return matchSearch && matchStatus;
     })
     .sort((a, b) => {
-      const dir = sortDir === "asc" ? 1 : -1;
-      if (sortKey === "stock") return (a.stock - b.stock) * dir;
-      if (sortKey === "price") return (a.price - b.price) * dir;
+      const dir = sortDir === 'asc' ? 1 : -1;
+      if (sortKey === 'stock') return (a.stock - b.stock) * dir;
+      if (sortKey === 'price') return (a.price - b.price) * dir;
       return a[sortKey].localeCompare(b[sortKey]) * dir;
     });
 
@@ -106,32 +109,28 @@ export default function ProductsTableLive() {
   const saveEdit = async (id: string) => {
     const val = parseInt(editValue, 10);
     if (isNaN(val) || val < 0) {
-      toast.error("Invalid stock value — enter a number >= 0");
+      toast.error('Invalid stock value — enter a number >= 0');
       return;
     }
 
     const supabase = createClient();
-    const { error } = await supabase
-      .from("products")
-      .update({ stock: val })
-      .eq("id", id);
+    const { error } = await supabase.from('products').update({ stock: val }).eq('id', id);
 
     if (error) {
-      toast.error("Failed to update stock", { description: error.message });
+      toast.error('Failed to update stock', { description: error.message });
       return;
     }
 
-    mutate("products");
+    mutate('products');
     setEditingId(null);
-    toast.success("Stock updated", {
-      description: "SKU saved — bot will use updated count.",
+    toast.success('Stock updated', {
+      description: 'SKU saved — bot will use updated count.',
     });
   };
 
   const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col)
-      return <ChevronUp size={12} className="text-muted-foreground/40" />;
-    return sortDir === "asc" ? (
+    if (sortKey !== col) return <ChevronUp size={12} className="text-muted-foreground/40" />;
+    return sortDir === 'asc' ? (
       <ChevronUp size={12} className="text-primary-600" />
     ) : (
       <ChevronDown size={12} className="text-primary-600" />
@@ -139,7 +138,7 @@ export default function ProductsTableLive() {
   };
 
   if (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return (
       <div className="bg-white rounded-card border border-border shadow-card p-8">
         <EmptyState
@@ -147,8 +146,8 @@ export default function ProductsTableLive() {
           title="Failed to load products"
           description={`There was an error loading the product inventory: ${errorMessage}`}
           action={{
-            label: "Retry",
-            onClick: () => mutate("products"),
+            label: 'Retry',
+            onClick: () => mutate('products'),
           }}
         />
       </div>
@@ -178,21 +177,21 @@ export default function ProductsTableLive() {
               key={`sf-${f}`}
               onClick={() => setStockFilter(f)}
               className={[
-                "px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors mono",
+                'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors mono',
                 stockFilter === f
-                  ? "bg-primary-600 text-white"
-                  : "bg-muted text-muted-foreground hover:bg-border",
-              ].join(" ")}
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-border',
+              ].join(' ')}
             >
               {stockFilterLabels[f]}
             </button>
           ))}
         </div>
         <button
-          onClick={() => mutate("products")}
+          onClick={() => mutate('products')}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-border transition-colors"
         >
-          <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
+          <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />
           Refresh
         </button>
         <span className="text-xs text-muted-foreground mono ml-auto">
@@ -210,7 +209,7 @@ export default function ProductsTableLive() {
               </th>
               <th
                 className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide mono cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => handleSort("name")}
+                onClick={() => handleSort('name')}
               >
                 <span className="flex items-center gap-1">
                   Product <SortIcon col="name" />
@@ -221,7 +220,7 @@ export default function ProductsTableLive() {
               </th>
               <th
                 className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide mono cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => handleSort("price")}
+                onClick={() => handleSort('price')}
               >
                 <span className="flex items-center justify-end gap-1">
                   Price ($) <SortIcon col="price" />
@@ -229,7 +228,7 @@ export default function ProductsTableLive() {
               </th>
               <th
                 className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide mono cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => handleSort("stock")}
+                onClick={() => handleSort('stock')}
               >
                 <span className="flex items-center justify-end gap-1">
                   Stock <SortIcon col="stock" />
@@ -247,13 +246,8 @@ export default function ProductsTableLive() {
             {isLoading ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center">
-                  <RefreshCw
-                    size={24}
-                    className="animate-spin mx-auto text-muted-foreground"
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Loading products...
-                  </p>
+                  <RefreshCw size={24} className="animate-spin mx-auto text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
@@ -264,10 +258,10 @@ export default function ProductsTableLive() {
                     title="No products match your filter"
                     description="Try adjusting the search or status filter to find your SKUs."
                     action={{
-                      label: "Clear Filters",
+                      label: 'Clear Filters',
                       onClick: () => {
-                        setSearch("");
-                        setStockFilter("all");
+                        setSearch('');
+                        setStockFilter('all');
                       },
                     }}
                   />
@@ -280,10 +274,10 @@ export default function ProductsTableLive() {
                   <tr
                     key={product.id}
                     className={[
-                      "hover:bg-muted/40 transition-colors",
-                      status === "out-of-stock" ? "bg-red-50/40" : "",
-                      status === "low-stock" ? "bg-amber-50/30" : "",
-                    ].join(" ")}
+                      'hover:bg-muted/40 transition-colors',
+                      status === 'out-of-stock' ? 'bg-red-50/40' : '',
+                      status === 'low-stock' ? 'bg-amber-50/30' : '',
+                    ].join(' ')}
                   >
                     <td className="px-4 py-3 mono text-xs text-muted-foreground whitespace-nowrap">
                       {product.sku}
@@ -310,9 +304,7 @@ export default function ProductsTableLive() {
                             type="number"
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) =>
-                              e.key === "Enter" && saveEdit(product.id)
-                            }
+                            onKeyDown={(e) => e.key === 'Enter' && saveEdit(product.id)}
                             className="w-16 px-2 py-1 text-xs text-right border border-primary-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-600/30 mono tabular-nums"
                             autoFocus
                             min={0}
@@ -334,10 +326,10 @@ export default function ProductsTableLive() {
                         <span
                           className={`font-bold tabular-nums mono text-sm ${
                             product.stock === 0
-                              ? "text-red-500"
+                              ? 'text-red-500'
                               : product.stock < LOW_STOCK_THRESHOLD
-                              ? "text-amber-600"
-                              : "text-foreground"
+                                ? 'text-amber-600'
+                                : 'text-foreground'
                           }`}
                         >
                           {product.stock}
@@ -369,14 +361,10 @@ export default function ProductsTableLive() {
       {/* Table footer */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-muted/30">
         <p className="text-xs text-muted-foreground mono">
-          Showing {filtered.length} SKUs ·{" "}
-          {(products || []).filter((p) => p.stock === 0).length} out of stock ·{" "}
-          {
-            (products || []).filter(
-              (p) => p.stock > 0 && p.stock < LOW_STOCK_THRESHOLD
-            ).length
-          }{" "}
-          low stock
+          Showing {filtered.length} SKUs · {(products || []).filter((p) => p.stock === 0).length}{' '}
+          out of stock ·{' '}
+          {(products || []).filter((p) => p.stock > 0 && p.stock < LOW_STOCK_THRESHOLD).length} low
+          stock
         </p>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mono">
           <Bot size={12} className="text-primary-600" />

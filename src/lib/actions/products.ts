@@ -1,7 +1,7 @@
-"use server";
+'use server';
 
-import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
 
 export interface Product {
   id: string;
@@ -16,12 +16,12 @@ export interface Product {
 export async function getProducts(): Promise<Product[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .order("name", { ascending: true });
+    .from('products')
+    .select('*')
+    .order('name', { ascending: true });
 
   if (error) {
-    console.error("Error fetching products:", error);
+    console.error('Error fetching products:', error);
     return [];
   }
 
@@ -30,14 +30,10 @@ export async function getProducts(): Promise<Product[]> {
 
 export async function getProductById(id: string): Promise<Product | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
 
   if (error) {
-    console.error("Error fetching product:", error);
+    console.error('Error fetching product:', error);
     return null;
   }
 
@@ -47,13 +43,13 @@ export async function getProductById(id: string): Promise<Product | null> {
 export async function searchProducts(query: string): Promise<Product[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("products")
-    .select("*")
+    .from('products')
+    .select('*')
     .or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
-    .order("name", { ascending: true });
+    .order('name', { ascending: true });
 
   if (error) {
-    console.error("Error searching products:", error);
+    console.error('Error searching products:', error);
     return [];
   }
 
@@ -65,17 +61,14 @@ export async function updateProductStock(
   newStock: number
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("products")
-    .update({ stock: newStock })
-    .eq("id", id);
+  const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', id);
 
   if (error) {
-    console.error("Error updating product stock:", error);
+    console.error('Error updating product stock:', error);
     return { success: false, error: error.message };
   }
 
-  revalidatePath("/products-inventory");
+  revalidatePath('/products-inventory');
   return { success: true };
 }
 
@@ -90,30 +83,30 @@ export async function createProduct(product: {
   const id = `prod_${Date.now()}`;
 
   const { data, error } = await supabase
-    .from("products")
+    .from('products')
     .insert([{ id, ...product }])
     .select()
     .single();
 
   if (error) {
-    console.error("Error creating product:", error);
+    console.error('Error creating product:', error);
     return { success: false, error: error.message };
   }
 
-  revalidatePath("/products-inventory");
+  revalidatePath('/products-inventory');
   return { success: true, data };
 }
 
 export async function getLowStockProducts(threshold = 50): Promise<Product[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .lt("stock", threshold)
-    .order("stock", { ascending: true });
+    .from('products')
+    .select('*')
+    .lt('stock', threshold)
+    .order('stock', { ascending: true });
 
   if (error) {
-    console.error("Error fetching low stock products:", error);
+    console.error('Error fetching low stock products:', error);
     return [];
   }
 

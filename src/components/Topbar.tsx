@@ -46,7 +46,10 @@ export default function Topbar({
             <React.Fragment key={`crumb-${i}`}>
               {i > 0 && <ChevronRight size={14} className="text-muted-foreground shrink-0" />}
               {crumb.href && i < breadcrumbs.length - 1 ? (
-                <Link href={crumb.href} className="text-muted-foreground hover:text-foreground transition-colors truncate">
+                <Link
+                  href={crumb.href}
+                  className="text-muted-foreground hover:text-foreground transition-colors truncate"
+                >
                   {crumb.label}
                 </Link>
               ) : (

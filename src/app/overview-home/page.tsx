@@ -5,8 +5,27 @@ import LiveActivityFeed from './components/LiveActivityFeed';
 import AgentTimeline from './components/AgentTimeline';
 import MessageVolumeChart from './components/MessageVolumeChart';
 import ReplyTimeChart from './components/ReplyTimeChart';
+import { getDashboardData } from '@/lib/actions/analytics';
 
-export default function OverviewHomePage() {
+export const dynamic = 'force-dynamic';
+
+export default async function OverviewHomePage() {
+  const dashboardData = await getDashboardData();
+
+  const todayStr = new Date().toLocaleDateString('en-MY', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  const timeStr = new Date().toLocaleTimeString('en-MY', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
   return (
     <AppLayout breadcrumbs={[{ label: 'Overview' }]}>
       <div className="space-y-6">
@@ -15,35 +34,35 @@ export default function OverviewHomePage() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Operations Overview</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              NabilahFashion.my · Shopee Malaysia · Mon, 20 Apr 2026
+              RachelFashion.my · {todayStr}
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mono">
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse inline-block" />
-            Updated 15:25:02
+            Updated {timeStr}
           </div>
         </div>
 
         {/* KPI Bento Grid */}
-        <KpiBentoGrid />
+        <KpiBentoGrid data={dashboardData.kpis} />
 
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-5 gap-4">
           <div className="xl:col-span-3">
-            <MessageVolumeChart />
+            <MessageVolumeChart data={dashboardData.volumeData} />
           </div>
           <div className="xl:col-span-2">
-            <ReplyTimeChart />
+            <ReplyTimeChart data={dashboardData.replyTimeData} />
           </div>
         </div>
 
         {/* Activity + Timeline row */}
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
           <div className="xl:col-span-3">
-            <LiveActivityFeed />
+            <LiveActivityFeed data={dashboardData.liveActivity} />
           </div>
           <div className="xl:col-span-2">
-            <AgentTimeline />
+            <AgentTimeline data={dashboardData.timeline} />
           </div>
         </div>
       </div>
