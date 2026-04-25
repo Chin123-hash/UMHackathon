@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, ChevronLeft, Bot, ShoppingBag, Grid, Play, Tag, Star, Truck, Package, RotateCcw, Shield, Plus, Home, Compass, User, ShoppingCart } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
-import { createBrowserClient } from '@supabase/ssr'; // Logic Transfer: Added for DB
-import { toast } from 'sonner'; // Logic Transfer: Added for feedback
+import { createBrowserClient } from '@supabase/ssr'; 
+import { toast } from 'sonner'; 
 
 /* ─── Types ─── */
 interface Product {
@@ -629,12 +629,12 @@ function DMChatPanel({
   product: Product | null;
   onClose: () => void;
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]); // Logic Transfer: Init empty for history
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
-  // Logic Transfer: Modal and Order States
+  // Modal and Order States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<any>(null);
 
@@ -644,7 +644,7 @@ function DMChatPanel({
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Logic Transfer: Fetch History from Supabase
+  // Fetch History from Supabase
   useEffect(() => {
     const fetchHistory = async () => {
       const { data } = await supabase
@@ -665,9 +665,16 @@ function DMChatPanel({
     fetchHistory();
   }, [supabase, conversationId]);
 
-  const quickReplies = ['Ada stok size M?', 'Pos ke Sabah?', 'Boleh COD?', 'Bila restock?'];
+  // Exact phrase to trigger backend human escalation
+  const quickReplies = [
+    'Ada stok size M?', 
+    'Pos ke Sabah?', 
+    'Boleh COD?', 
+    'Bila restock?', 
+    'I want to talk to the owner' 
+  ];
 
-  // Logic Transfer: Integrated sendMessage calling real API
+  // Integrated sendMessage calling real API
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
     const now = new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' });
@@ -699,13 +706,13 @@ function DMChatPanel({
 
       setMessages((prev) => [...prev, { id: `bot-${Date.now()}`, sender: 'bot', text: reply, time: now }]);
     } catch (e) {
-      toast.error("Bot sedang offline.");
+      toast.error("Bot is currently offline.");
     } finally {
       setIsTyping(false);
     }
   };
 
-  // Logic Transfer: Handle final DB confirmation
+  // Handle final DB confirmation
   const handleFinalConfirm = async () => {
     setIsModalOpen(false);
     setIsTyping(true);
@@ -717,7 +724,10 @@ function DMChatPanel({
         conversationId, 
         message: "ACTION_CONFIRM_ORDER", 
         productId: pendingOrder.id,
-        qty: pendingOrder.qty 
+        qty: pendingOrder.qty,
+        totalPrice: pendingOrder.total, 
+        customerName: pendingOrder.customerName || "Instagram User",
+        destination: pendingOrder.destination || "Selangor"
       })
     });
     
@@ -734,7 +744,7 @@ function DMChatPanel({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
       {/* Header */}
-      <div className="border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+      <div className="border-b border-gray-100 px-4 py-3 flex items-center gap-3 shrink-0">
         <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
           <ChevronLeft size={22} className="text-gray-700" />
         </button>
@@ -758,7 +768,7 @@ function DMChatPanel({
 
       {/* Product context */}
       {product && (
-        <div className="bg-gray-50 border-b border-gray-100 px-4 py-2 flex items-center gap-3">
+        <div className="bg-gray-50 border-b border-gray-100 px-4 py-2 flex items-center gap-3 shrink-0">
           <img src={product.image} alt={product.name} className="w-10 h-10 rounded-lg object-cover" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-700 truncate">{product.name}</p>
@@ -821,21 +831,35 @@ function DMChatPanel({
         <div ref={bottomRef} />
       </div>
 
+      {/* ✅ AI Disclaimer Banner (Rounded & Pinned) */}
+      <div className="px-3 pt-1 shrink-0 bg-white">
+        <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 flex gap-2 items-start">
+          <Bot size={14} className="text-gray-400 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            <span className="font-semibold text-gray-600">AI Assistant Active:</span> Handled by AI by default. If you find any hallucinations or misinformation, please request a human seller below.
+          </p>
+        </div>
+      </div>
+
       {/* Quick replies */}
-      <div className="bg-white border-t border-gray-100 px-3 py-2 flex gap-2 overflow-x-auto scrollbar-none">
+      <div className="bg-white border-t border-gray-100 px-3 py-2 flex gap-2 overflow-x-auto scrollbar-none shrink-0">
         {quickReplies.map((qr) => (
           <button
             key={qr}
             onClick={() => sendMessage(qr)}
-            className="whitespace-nowrap text-xs px-3 py-1.5 rounded-full border border-gray-300 text-gray-600 hover:border-gray-500 hover:text-gray-800 transition-colors shrink-0"
+            className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-full border transition-colors shrink-0 ${
+              qr === 'I want to talk to the owner' 
+                ? 'border-blue-400 text-blue-600 bg-blue-50 hover:bg-blue-100 font-medium' 
+                : 'border-gray-300 text-gray-600 hover:border-gray-500 hover:text-gray-800'
+            }`}
           >
-            {qr}
+            {qr === 'I want to talk to the owner' ? '👤 Talk to owner' : qr}
           </button>
         ))}
       </div>
 
       {/* Input */}
-      <div className="bg-white border-t border-gray-200 px-3 py-2.5 flex items-center gap-2">
+      <div className="bg-white border-t border-gray-200 px-3 py-2.5 flex items-center gap-2 shrink-0">
         <div className="flex-1 flex items-center bg-gray-100 rounded-full px-4 py-2 gap-2">
           <input
             value={input}
@@ -859,7 +883,7 @@ function DMChatPanel({
         )}
       </div>
 
-      {/* Logic Transfer: Confirmation Modal Integrated into Layout */}
+      {/* Confirmation Modal Integrated into Layout */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-xs p-6 shadow-2xl animate-in zoom-in-95 duration-200">
@@ -867,22 +891,34 @@ function DMChatPanel({
               <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mb-4 text-pink-600">
                 <ShoppingCart size={24} />
               </div>
-              <h3 className="font-bold text-lg mb-2 text-gray-800">Sahkan Pesanan?</h3>
-              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                Adakah anda pasti ingin memesan <span className="font-bold text-gray-700">{pendingOrder?.qty}x {pendingOrder?.name}</span>?
-              </p>
+              <h3 className="font-bold text-lg mb-2 text-gray-800">Confirm Order?</h3>
+              
+              {/* Updated Description with Price */}
+              <div className="text-sm text-gray-500 mb-6 space-y-1 leading-relaxed">
+                <p>
+                  Hi <span className="font-bold text-gray-800">{pendingOrder?.customerName}</span>! 
+                </p>
+                <p>
+                  Please confirm order for <span className="font-bold text-gray-700">{pendingOrder?.qty}x {pendingOrder?.name}</span>.
+                </p>
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs uppercase tracking-widest text-gray-400">Total Payment</p>
+                  <p className="text-2xl font-black text-pink-600">RM{pendingOrder?.total?.toFixed(2)}</p>
+                </div>
+              </div>
+
               <div className="flex w-full gap-3">
                 <button 
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 active:scale-95 transition-all"
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all"
                 >
-                  Nanti Dulu
+                  Cancel
                 </button>
                 <button 
                   onClick={handleFinalConfirm}
                   className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-bold shadow-lg active:scale-95 transition-all"
                 >
-                  Ya, Sahkan!
+                  Confirm
                 </button>
               </div>
             </div>

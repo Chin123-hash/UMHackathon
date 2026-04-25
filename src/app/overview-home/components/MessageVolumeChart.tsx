@@ -25,7 +25,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-white border border-border rounded-lg shadow-card px-3 py-2 text-xs">
         <p className="font-semibold text-foreground mono mb-1">{label}</p>
         <p className="text-foreground">
-          Total: <span className="font-semibold tabular-nums">{payload[0]?.value}</span>
+          Total Handled: <span className="font-semibold tabular-nums">{payload[0]?.value}</span>
         </p>
         <p className="text-primary-600">
           Bot: <span className="font-semibold tabular-nums">{payload[1]?.value}</span>
@@ -42,26 +42,32 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function MessageVolumeChart({ data }: { data: VolumeData[] }) {
   const currentHour = new Date().getHours().toString().padStart(2, '0') + ':00';
 
+  // ✅ FIX: Calculate "Total Handled" dynamically so it always equals Bot + Owner
+  const chartData = data.map(d => ({
+    ...d,
+    totalHandled: (d.botHandled || 0) + (d.ownerHandled || 0),
+  }));
+
   return (
     <div className="bg-white rounded-card border border-border shadow-card p-5 h-full">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Message Volume</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Total vs Bot vs Owner across the day
+            Total Handled vs Bot vs Owner across the day
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-gray-300" />
-            <span className="text-muted-foreground">Total</span>
+            <span className="text-muted-foreground">Total Handled</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-primary-500" />
             <span className="text-muted-foreground">Bot Handled</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
             <span className="text-muted-foreground">Owner Replied</span>
           </div>
         </div>
@@ -69,7 +75,8 @@ export default function MessageVolumeChart({ data }: { data: VolumeData[] }) {
 
       <div className="h-[240px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          {/* ✅ FIX: Pass the modified chartData instead of raw data */}
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorBot" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="hsl(12, 85%, 55%)" stopOpacity={0.3} />
@@ -95,13 +102,14 @@ export default function MessageVolumeChart({ data }: { data: VolumeData[] }) {
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(210, 20%, 90%)', strokeWidth: 1, strokeDasharray: '4 4' }} />
             
-            {data.some(d => d.time === currentHour) && (
+            {chartData.some(d => d.time === currentHour) && (
               <ReferenceLine x={currentHour} stroke="hsl(215, 16%, 47%)" strokeDasharray="3 3" />
             )}
 
+            {/* ✅ FIX: Map the "Total" area to the dynamically calculated totalHandled */}
             <Area
               type="monotone"
-              dataKey="messages"
+              dataKey="totalHandled"
               stroke="hsl(210, 16%, 82%)"
               strokeWidth={2}
               fill="transparent"
