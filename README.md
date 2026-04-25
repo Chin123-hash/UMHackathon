@@ -1,8 +1,8 @@
-# Next.js
+# Pitching Video
 
-A modern Next.js 15 application built with TypeScript and Tailwind CSS.
+# https://drive.google.com/file/d/1bYU4w2kEBSA4H5y_-MLGutuR9_XseEBY/view?usp=sharing
 
-## 🚀 Features
+## 🚀 Technical Stack
 
 - **Next.js 15** - Latest version with improved performance and features
 - **React 19** - Latest React version with enhanced capabilities
@@ -43,42 +43,8 @@ nextjs/
 
 ```
 
-## 🧩 Page Editing
+- Built with [Rocket.new](https://rocket.new)
+- Powered by Next.js and React
+- Styled with Tailwind CSS
 
-You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
-
-## 🎨 Styling
-
-This project uses Tailwind CSS for styling with the following features:
-- Utility-first approach for rapid development
-- Custom theme configuration
-- Responsive design utilities
-- PostCSS and Autoprefixer integration
-
-## 📦 Available Scripts
-
-- `npm run dev` - Start development server on port 4028
-- `npm run build` - Build the application for production
-- `npm run start` - Start the development server
-- `npm run serve` - Start the production server
-- `npm run lint` - Run ESLint to check code quality
-- `npm run lint:fix` - Fix ESLint issues automatically
-- `npm run format` - Format code with Prettier
-
-## 📱 Deployment
-
-Build the application for production:
-
-  ```bash
-  npm run build
-  ```
-
-## 📚 Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial
-
-You can check out the [Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
+Built with ❤️ on Rocket.new#
