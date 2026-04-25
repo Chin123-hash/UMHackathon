@@ -42,9 +42,3 @@ nextjs/
 └── tailwind.config.js  # Tailwind CSS configuration
 
 ```
-
-- Built with [Rocket.new](https://rocket.new)
-- Powered by Next.js and React
-- Styled with Tailwind CSS
-
-Built with ❤️ on Rocket.new#
