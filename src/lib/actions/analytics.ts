@@ -125,6 +125,24 @@ async function fetchAIResponse(prompt: string, maxTokens = 500): Promise<string>
   return '';
 }
 
+// ✅ NEW: AI Sourcing Action - Suggesting suitable suppliers
+export async function getSupplierRecommendations(productName: string): Promise<string> {
+  const prompt = `Act as an expert Sourcing Agent for a Malaysian fashion retail store. 
+We are low on stock for the product: "${productName}".
+
+Search and recommend 3 suitable wholesale suppliers or manufacturers in Malaysia or the Southeast Asian region (e.g., Vietnam, China) that specialize in this type of product.
+For each supplier, provide:
+1. Name and Location
+2. Why they are suitable (specialization, price range, or reliability)
+3. One actionable sourcing tip.
+
+STRICTLY plain text ONLY. DO NOT use any Markdown formatting (no #, no *, no -, no bullets). Use simple numbering like 1., 2. and clear spacing.`;
+
+  const result = await fetchAIResponse(prompt, 600);
+  return result || "Could not find supplier recommendations at this time.";
+}
+
+
 export async function getSalesAnalytics(days = 30): Promise<SalesAnalytics | null> {
   const supabase = await createClient();
   const startDate = new Date();
@@ -174,7 +192,7 @@ export async function getInventorySummary(): Promise<InventorySummary> {
     totalProducts: products.length,
     totalStock: products.reduce((sum, p) => sum + (p.stock || 0), 0),
     totalValue: products.reduce((sum, p) => sum + (p.stock || 0) * (p.price || 0), 0),
-    lowStockCount: products.filter((p) => (p.stock || 0) < 10).length,
+    lowStockCount: products.filter((p) => (p.stock || 0) < 25).length,
   };
 }
 
@@ -191,7 +209,7 @@ export async function getAIDailyBriefing(
       : inventory.lowStockCount > 0
         ? 'Needs Attention'
         : 'Healthy';
-  const prompt = `You are a retail data analyst for a Malaysian fashion store. Write a short, professional daily briefing for the store owner in English.\n\nData:\n- Revenue: RM${sales.totalRevenue.toFixed(2)} (${sales.totalOrders} orders).\n- Top Product: ${topProduct?.name || 'None'}\n- Stock Health: ${stockHealth} (${inventory.lowStockCount} items low)\n\nWrite 2 paragraphs. P1: Celebrate top product. P2: Stock advice.`;
+  const prompt = `You are a retail data analyst for a Malaysian fashion store. Write a short, professional daily briefing for the store owner in English.\n\nData:\n- Revenue: RM${sales.totalRevenue.toFixed(2)} (${sales.totalOrders} orders).\n- Top Product: ${topProduct?.name || 'None'}\n- Stock Health: ${stockHealth} (${inventory.lowStockCount} items low)\n\nWrite 2 short paragraphs in plain text ONLY. NO Markdown formatting (no asterisks or hashtags). Paragraph 1: Celebrate top product. Paragraph 2: Stock advice.`;
   const resultText = await fetchAIResponse(prompt, 500);
   return resultText || 'Briefing unavailable.';
 }

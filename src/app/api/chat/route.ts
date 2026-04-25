@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { createOrder } from '@/lib/actions/orders';
+import { createClient } from "@/lib/supabase/server";
+import { createOrder } from "@/lib/actions/orders";
 
 export const maxDuration = 60;
 
@@ -24,17 +24,24 @@ export async function POST(req: Request) {
 
     const supabase = await createClient();
 
+    console.group("🚀 =========================================");
+    console.log("📨 Payload received:", { message, conversationId, productId });
+
     // --- 1. HANDLE FINAL PURCHASE CONFIRMATION ---
-    if (message === 'ACTION_CONFIRM_ORDER') {
+    if (message === "ACTION_CONFIRM_ORDER") {
+      console.log("⚙️ Trigger: ACTION_CONFIRM_ORDER");
       const targetId = productId || 'p-001-M';
 
-      const { error: stockError } = await supabase.rpc('decrement_stock', {
-        row_id: targetId,
-        qty: qty,
-      });
-      if (stockError)
+      // ✅ FIXED SYNTAX ERROR
+      console.log("📦 Decrementing stock for:", targetId, "qty:", qty);
+      
+      const { error: stockError } = await supabase.rpc('decrement_stock', { row_id: targetId, qty });
+      if (stockError) {
+        console.groupEnd();
         return NextResponse.json({ reply: 'Sorry, the item just went out of stock! 🙏' });
+      }
 
+      console.log("📝 Creating order record...");
       const { data: orderData } = await createOrder({
         product_id: targetId,
         quantity: qty,
@@ -43,103 +50,116 @@ export async function POST(req: Request) {
         destination: destination,
         status: 'pending',
       });
+      console.log("✅ Order created. ID:", orderData?.id);
 
-      await supabase.from('messages').insert([
-        {
-          conversation_id: conversationId,
-          sender: 'system',
-          text: `🚨 NEW ORDER: ${customerName} bought ${qty}x [${targetId}]. \n⚠️ ACTION REQUIRED: Please manually send the tracking number to this customer.`,
-        },
-      ]);
+      console.log("📝 Inserting system log...");
+      await supabase.from('messages').insert([{
+        conversation_id: conversationId,
+        sender: 'system',
+        text: `🚨 NEW ORDER: ${customerName} bought ${qty}x [${targetId}]. \n⚠️ ACTION REQUIRED: Please manually send the tracking number to this customer.`,
+      }]);
+      console.log("🔄 Flagging conversation unanswered...");
+      await supabase.from("messages").update({ status: 'unanswered' }).eq('conversation_id', conversationId);
 
-      await supabase
-        .from('messages')
-        .update({ status: 'unanswered' })
-        .eq('conversation_id', conversationId);
-
+      console.log("✅ Returning success confirmation to customer.");
+      console.groupEnd();
       return NextResponse.json({
-        reply:
-          'Success! Your order has been confirmed. Please wait a moment; the seller will send you the tracking number shortly. 😊',
+        reply: 'Success! Your order has been confirmed. Please wait a moment; the seller will send you the tracking number shortly. 😊',
       });
     }
 
     // --- 2. LOG & FETCH HISTORY & CHECK FAILURES ---
-    let chatHistory: any[] = [];
+    console.group("📖 Fetching History & Checking Failures...");
+    // ✅ FIXED TYPE ERROR
+    let chatHistory: ChatMessage[] = [];
     let failureCount = 0;
 
     if (conversationId) {
       const { data: historyData } = await supabase
-        .from('messages')
-        .select('sender, text, status')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: false })
+        .from("messages")
+        .select("sender, text, status")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: false })
         .limit(10);
 
       if (historyData) {
+        let botFailCount = 0;
         for (const msg of historyData) {
           if (msg.sender === 'bot') {
-            if (msg.status === 'failed') failureCount++;
+            if (msg.status === 'failed') botFailCount++;
             else break;
           }
         }
+        // ✅ FIXED LOGIC: Link internal count to escalation variable
+        failureCount = botFailCount;
+        console.log(`📊 History fetched. Records: ${historyData.length}, Bot fails in history: ${botFailCount}`);
+
         chatHistory = historyData.reverse().map((msg) => ({
           role: msg.sender === 'customer' ? 'user' : 'assistant',
           content: msg.text,
         }));
+      } else {
+        console.log("⚠️ No conversationId provided. Skipping history fetch.");
       }
 
-      await supabase.from('messages').insert([
-        {
-          conversation_id: conversationId,
-          sender: 'customer',
-          text: message,
-          status: 'unanswered',
-        },
-      ]);
+      console.log("📝 Logging customer message to DB...");
+      await supabase.from("messages").insert([{
+        conversation_id: conversationId,
+        sender: 'customer',
+        text: message,
+        status: 'unanswered',
+      }]);
     }
+    console.groupEnd();
 
     // Human-in-the-Loop Escalation Logic (AI failures)
     if (failureCount >= 2) {
-      console.warn(`>>> [HITL] AI failed ${failureCount + 1} times. Escalating to human.`);
-      await supabase.from('messages').insert([
-        {
-          conversation_id: conversationId,
-          sender: 'system',
-          text: `⚠️ ESCALATION: AI bot failed 3 times. Human intervention required.`,
-        },
-      ]);
-      await supabase
-        .from('messages')
-        .update({ status: 'unanswered' })
-        .eq('conversation_id', conversationId);
+      console.warn(`⚠️ [HITL] AI failed ${failureCount + 1} times. Escalating to human.`);
+      await supabase.from("messages").insert([{
+        conversation_id: conversationId,
+        sender: 'system',
+        text: `⚠️ ESCALATION: AI bot failed 3 times. Human intervention required.`,
+      }]);
+      await supabase.from("messages").update({ status: 'unanswered' }).eq('conversation_id', conversationId);
       return NextResponse.json({
-        reply:
-          "Sorry, our AI system is having issues. I've already notified the owner to reply to you manually. 🙏",
+        reply: "Sorry, our AI system is having issues. I've already notified the owner to reply to you manually. 🙏",
       });
     }
 
     // --- 3. FETCH CONTEXT ---
-    const { data: products } = await supabase.from('products').select('*');
+    console.group("🛒 Fetching Inventory & Shipping Rates...");
+    const { data: products } = await supabase.from("products").select("*");
+    console.log(`📦 Products fetched: ${products?.length || 0} items`);
+
     const { data: rates } = await supabase
       .from('courier_rates')
       .select(`buyer_base_price, handling_fee, destination, courier_partners(name)`);
+    console.log(`🚚 Shipping rates fetched: ${rates?.length || 0} records`);
+    console.groupEnd();
 
+    // --- 4. CONSTRUCT PROMPT ---
+    console.group("🧠 Constructing System Prompt...");
     const inventoryTable = products
-      ?.map(
-        (p) => `| ID: ${p.id} | NAME: ${p.name} | PRICE: RM${p.price} | STOCK: ${p.stock} units |`
-      )
-      .join('\n');
+      ?.map((p) => `| ID: ${p.id} | NAME: ${p.name} | PRICE: RM${p.price} | STOCK: ${p.stock} units |`)
+      .join("\n");
     const shippingContext = rates
-      ?.map((r) => {
+      ?.map((r: any) => { // ✅ FIXED: Added 'any' to prevent join error
         const partner = Array.isArray(r.courier_partners)
           ? r.courier_partners[0]?.name
-          : (r.courier_partners as any)?.name;
+          : r.courier_partners?.name;
         const totalShipping = Number(r.buyer_base_price) + Number(r.handling_fee);
         return `- State: ${r.destination} | Shipping: RM${totalShipping.toFixed(2)} (${partner})`;
       })
-      .join('\n');
+      .join("\n");
 
-    // --- 4. SYSTEM PROMPT ---
+    console.log(`📊 Context mapping complete.`);
+    console.groupEnd();
+
+    // --- 5. CALL AI ---
+    console.group("🤖 Calling AI Provider...");
+    const zaiApiKey = process.env.ZAI_API_KEY;
+    const groqApiKey = process.env.GROQ_API_KEY;
+
     const systemPrompt = `You are SellerMate AI, a helpful sales assistant. 
 
     LANGUAGE RULE (STRICT): 
@@ -197,12 +217,10 @@ export async function POST(req: Request) {
     Shipping: ${shippingContext}`;
 
     let botReply = '';
-    const zaiApiKey = process.env.ZAI_API_KEY;
-    const groqApiKey = process.env.GROQ_API_KEY;
 
     // --- 5. PRIMARY EXECUTION: Z.ai (Anthropic Format) ---
     if (zaiApiKey && !zaiApiKey.includes('your-zai')) {
-      console.log('>>> [DEBUG] Attempting Z.ai...');
+      console.log("➡️ Trying Z.ai...");
       try {
         const res = await fetch('https://api.ilmu.ai/anthropic/v1/messages', {
           method: 'POST',
@@ -219,28 +237,24 @@ export async function POST(req: Request) {
         if (res.ok) {
           const data = await res.json();
           botReply = data.content[0].text;
-          console.log('>>> [DEBUG] Z.ai Success.');
+          console.log("✅ Z.ai Success. Response length:", botReply.length, "chars");
         } else {
-          const errorBody = await res.text();
-          console.error(`>>> [ERROR] Z.ai Status: ${res.status} | Body: ${errorBody}`);
+          console.error(`❌ Z.ai Failed. Status: ${res.status}`);
         }
       } catch (err: any) {
-        console.error(
-          '>>> [DEBUG] Z.ai Exception:',
-          err.name === 'AbortError' ? 'Timeout' : err.message
-        );
+        console.error("❌ Z.ai Exception:", err.message);
       }
     }
 
     // --- 6. FALLBACK EXECUTION: Groq (OpenAI Format) ---
     if (!botReply && groqApiKey) {
-      console.log('>>> [DEBUG] Z.ai failed/skipped. Attempting Groq Fallback...');
+      console.group("➡️ Z.ai failed/skipped. Trying Groq Fallback...");
       try {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${groqApiKey.trim()}`,
+            'Authorization': `Bearer ${groqApiKey.trim()}`,
           },
           body: JSON.stringify({
             model: 'llama-3.3-70b-versatile',
@@ -257,86 +271,61 @@ export async function POST(req: Request) {
         if (res.ok) {
           const data = await res.json();
           botReply = data.choices[0].message.content;
-          console.log('>>> [DEBUG] Groq Success.');
-        } else {
-          const errorBody = await res.text();
-          console.error(`>>> [ERROR] Groq Status: ${res.status} | Body: ${errorBody}`);
+          console.log("✅ Groq Fallback Success.");
         }
       } catch (err: any) {
-        console.error(
-          '>>> [DEBUG] Groq Exception:',
-          err.name === 'AbortError' ? 'Timeout' : err.message
-        );
+        console.error("❌ Groq Exception:", err.message);
       }
+      console.groupEnd();
     }
+    console.groupEnd();
 
     // --- 7. POST-REPLY LOGGING & HUMAN ESCALATION HANDLING ---
+    console.group("💾 Logging to DB & UI...");
     if (botReply) {
       if (botReply.includes('[REQUEST_HUMAN]')) {
-        console.log('>>> [HUMAN ESCALATION] Customer requested to speak with human seller.');
-
+        console.log("🚨 [HUMAN ESCALATION] Detected! Removing tag and flagging conversation.");
         const cleanReply = botReply.replace('[REQUEST_HUMAN]', '').trim();
-        const customerMessage = cleanReply;
 
         if (conversationId) {
-          await supabase.from('messages').insert([
-            {
-              conversation_id: conversationId,
-              sender: 'bot',
-              text: customerMessage,
-              status: 'bot-responded',
-            },
-          ]);
-
-          await supabase.from('messages').insert([
-            {
-              conversation_id: conversationId,
-              sender: 'system',
-              text: `👤 HUMAN REQUEST: Customer wants to speak with a real person/owner!\n\n💬 Customer said: "${message}"\n\n⚠️ ACTION REQUIRED: Please reply to this conversation manually.`,
-            },
-          ]);
-
-          await supabase
-            .from('messages')
-            .update({ status: 'unanswered' })
-            .eq('conversation_id', conversationId);
-        }
-
-        return NextResponse.json({
-          reply: customerMessage,
-          escalatedToHuman: true,
-        });
-      }
-
-      if (conversationId) {
-        await supabase.from('messages').insert([
-          {
+          await supabase.from('messages').insert([{
             conversation_id: conversationId,
             sender: 'bot',
-            text: botReply,
+            text: cleanReply,
             status: 'bot-responded',
-          },
-        ]);
-      }
-      return NextResponse.json({ reply: botReply });
-    } else {
-      console.error('>>> [CRITICAL] Both AI providers failed to return a response.');
-      if (conversationId) {
-        await supabase.from('messages').insert([
-          {
+          }]);
+
+          await supabase.from('messages').insert([{
             conversation_id: conversationId,
-            sender: 'bot',
-            text: 'Technical error.',
-            status: 'failed',
-          },
-        ]);
+            sender: 'system',
+            text: `👤 HUMAN REQUEST: Customer wants manual assistance.`,
+          }]);
+
+          await supabase.from("messages").update({ status: 'unanswered' }).eq('conversation_id', conversationId);
+          console.groupEnd();
+          console.groupEnd();
+          return NextResponse.json({ reply: cleanReply, escalatedToHuman: true });
+        }
       }
-      return NextResponse.json({
-        reply: 'Sorry, the system is a bit busy right now. Please try again? 🙏',
-      });
+
+      if (conversationId) {
+        await supabase.from('messages').insert([{
+          conversation_id: conversationId,
+          sender: 'bot',
+          text: botReply,
+          status: 'bot-responded',
+        }]);
+      }
+      console.log("✅ Returning response to UI.");
+      console.groupEnd();
+      console.groupEnd();
+      return NextResponse.json({ reply: botReply });
     }
+
+    throw new Error("No response from AI.");
+
   } catch (error: any) {
-    console.error('>>> [CRITICAL] Internal Router Error:', error.message);
+    console.error("❌ [CRITICAL] Internal Router Error:", error.message);
     return NextResponse.json({ reply: 'System Error.' }, { status: 500 });
   }
 }

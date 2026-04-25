@@ -223,7 +223,7 @@ export default function LiveChatAnalysisPage() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Live Chat Analysis</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              NabilahFashion.my · Today, 20 Apr 2026
+              RachelFashion.my · Today, 20 Apr 2026
             </p>
           </div>
           <div className="flex items-center gap-3">

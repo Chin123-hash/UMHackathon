@@ -38,7 +38,7 @@ const stockFilterLabels: Record<StockFilter, string> = {
   'out-of-stock': 'Out of Stock',
 };
 
-const LOW_STOCK_THRESHOLD = 50;
+const LOW_STOCK_THRESHOLD = 30;
 
 async function fetchProducts(): Promise<ProductRow[]> {
   const supabase = createClient();

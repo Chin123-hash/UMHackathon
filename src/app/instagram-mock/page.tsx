@@ -68,14 +68,14 @@ const products: Product[] = [
     stock: 14,
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['Dusty Rose', 'Sage Green', 'Navy Blue'],
-    shopName: 'NabilahFashion.my',
+    shopName: 'RachelFashion.my',
     location: 'Kuala Lumpur',
     badge: 'Bestseller',
     description:
       'Baju kurung moden dengan sulaman bunga halus. Kain premium, selesa dipakai seharian. Sesuai untuk majlis & harian.',
     likes: 1247,
     caption:
-      '✨ New drop! Baju Kurung Moden Sulam Bunga — available in 3 warna cantik. Link in bio untuk order 🛍️ #BajuKurung #NabilahFashion #OotdMalaysia',
+      '✨ New drop! Baju Kurung Moden Sulam Bunga — available in 3 warna cantik. Link in bio untuk order 🛍️ #BajuKurung #RachelFashion #OotdMalaysia',
   },
   {
     id: 'p-002',
@@ -88,7 +88,7 @@ const products: Product[] = [
     stock: 6,
     sizes: ['S', 'M', 'L'],
     colors: ['Cream', 'Blush Pink', 'Mint'],
-    shopName: 'NabilahFashion.my',
+    shopName: 'RachelFashion.my',
     location: 'Kuala Lumpur',
     badge: 'Low Stock',
     description:
@@ -108,7 +108,7 @@ const products: Product[] = [
     stock: 22,
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     colors: ['Multicolor'],
-    shopName: 'NabilahFashion.my',
+    shopName: 'RachelFashion.my',
     location: 'Kuala Lumpur',
     badge: 'Top Rated',
     description:
@@ -128,7 +128,7 @@ const products: Product[] = [
     stock: 45,
     sizes: ['Free Size'],
     colors: ['10 Colors Available'],
-    shopName: 'NabilahFashion.my',
+    shopName: 'RachelFashion.my',
     location: 'Kuala Lumpur',
     badge: 'Hot Deal',
     description:
@@ -147,7 +147,7 @@ const products: Product[] = [
     stock: 18,
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['Black', 'Camel', 'Olive'],
-    shopName: 'NabilahFashion.my',
+    shopName: 'RachelFashion.my',
     location: 'Kuala Lumpur',
     description:
       'Palazzo pants linen yang selesa & stylish. Potongan wide leg yang trendy. Sesuai untuk kerja & casual.',
@@ -166,14 +166,14 @@ const products: Product[] = [
     stock: 9,
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['White', 'Light Blue', 'Charcoal'],
-    shopName: 'NabilahFashion.my',
+    shopName: 'RachelFashion.my',
     location: 'Kuala Lumpur',
     badge: 'New Arrival',
     description:
       'Set baju melayu moden potongan slim fit. Kain teluk belanga premium. Lengkap dengan sampin & butang.',
     likes: 1089,
     caption:
-      '👔 New Arrival! Set Baju Melayu Moden Slim Fit — potongan kemas & moden. Lengkap dengan sampin & butang premium ✨ #BajuMelayu #RayaReady #NabilahFashion',
+      '👔 New Arrival! Set Baju Melayu Moden Slim Fit — potongan kemas & moden. Lengkap dengan sampin & butang premium ✨ #BajuMelayu #RayaReady #RachelFashion',
   },
 ];
 
@@ -195,7 +195,7 @@ function IGHeader({ onDMClick }: { onDMClick: () => void }) {
           className="font-bold text-xl tracking-tight text-gray-900"
           style={{ fontFamily: 'Georgia, serif' }}
         >
-          NabilahFashion
+          RachelFashion
         </span>
         <div className="flex items-center gap-4">
           <button className="text-gray-800 hover:text-gray-600 transition-colors">
@@ -296,7 +296,7 @@ function FeedPost({
       <div className="relative cursor-pointer" onDoubleClick={handleLike} onClick={onProductClick}>
         <img
           src={product.image}
-          alt={`${product.name} by NabilahFashion`}
+          alt={`${product.name} by RachelFashion`}
           className="w-full aspect-square object-cover"
         />
         {/* Shopping tag overlay */}
@@ -387,7 +387,7 @@ function FeedPost({
 
         {/* Caption */}
         <p className="text-sm text-gray-800 leading-relaxed">
-          <span className="font-semibold">nabilahfashion.my </span>
+          <span className="font-semibold">rachelfashion.my </span>
           <span className="text-gray-600">{product.caption}</span>
         </p>
 
@@ -449,10 +449,10 @@ function ProfileHeader({ onChatClick }: { onChatClick: () => void }) {
           </div>
         </div>
         <div className="mb-3">
-          <p className="text-sm font-semibold text-gray-900">NabilahFashion.my 🛍️</p>
+          <p className="text-sm font-semibold text-gray-900">RachelFashion.my 🛍️</p>
           <p className="text-sm text-gray-600">Fashion & Lifestyle · Kuala Lumpur</p>
           <p className="text-sm text-gray-600">✨ Baju kurung, blouse & more</p>
-          <p className="text-sm text-blue-500">🔗 nabilahfashion.my/shop</p>
+          <p className="text-sm text-blue-500">🔗 rachelfashion.my/shop</p>
         </div>
         <div className="flex gap-2">
           <button className="flex-1 py-1.5 bg-gray-100 text-gray-800 text-sm font-semibold rounded-lg hover:bg-gray-200 transition-colors">
@@ -491,7 +491,7 @@ function GridView({
         >
           <img
             src={product.image}
-            alt={`${product.name} – NabilahFashion`}
+            alt={`${product.name} – RachelFashion`}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
@@ -535,7 +535,7 @@ function ProductDetailSheet({
         <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
           <ChevronLeft size={22} className="text-gray-700" />
         </button>
-        <p className="text-sm font-semibold text-gray-800">nabilahfashion.my</p>
+        <p className="text-sm font-semibold text-gray-800">rachelfashion.my</p>
         <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
           <MoreHorizontal size={22} className="text-gray-700" />
         </button>
@@ -546,7 +546,7 @@ function ProductDetailSheet({
         <div className="relative">
           <img
             src={product.image}
-            alt={`${product.name} – NabilahFashion`}
+            alt={`${product.name} – RachelFashion`}
             className="w-full aspect-square object-cover"
           />
           {discount && (
@@ -856,7 +856,7 @@ function DMChatPanel({ product, onClose }: { product: Product | null; onClose: (
           </div>
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-900">nabilahfashion.my</p>
+          <p className="text-sm font-semibold text-gray-900">rachelfashion.my</p>
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block" />
             Active now

@@ -174,7 +174,7 @@ export default function Sidebar({ collapsed, mobileOpen, onMobileClose }: Sideba
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">Siti Nabilah</p>
-              <p className="text-xs text-muted-foreground truncate">NabilahFashion.my</p>
+              <p className="text-xs text-muted-foreground truncate">RachelFashion.my</p>
             </div>
             <Bell size={15} className="text-muted-foreground shrink-0" />
           </div>

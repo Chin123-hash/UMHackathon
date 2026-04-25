@@ -355,7 +355,7 @@ export default function OrdersShippingPage() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Orders & Shipping</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              NabilahFashion.my · {mappedOrders.length} orders total
+              RachelFashion.my · {mappedOrders.length} orders total
             </p>
           </div>
           <div className="flex items-center gap-4">
