@@ -42,3 +42,13 @@ nextjs/
 └── tailwind.config.js  # Tailwind CSS configuration
 
 ```
+## 👥 Contributors & Responsibilities
+
+* **[CHIN CHUN WEI]** 
+  - **Tech & Media:** AI-Driven Code Generation, Project Setup, Video Editing, Pitching Actor.
+* **[VARUNESH RAU]**
+  - **Product:** Product Requirement Documentation (PRD), Pitching Actor.
+* **[HENG HON LIM]**
+  - **System & Ideation:** Concept Generation, System Analysis Documentation (SAD), Pitching Actor.
+* **[TAM HUI SHAN]**
+  - **Quality Assurance:** Testing Analysis Documentation, Video Editing, Pitching Actor.
